@@ -10,6 +10,7 @@ RUN mvn -pl workload-service -am clean package -DskipTests
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
+COPY tools/container-healthcheck.sh /app/healthcheck.sh
 COPY --from=build /workspace/workload-service/target/workload-service-*.jar app.jar
 EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -11,7 +11,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d:ro
@@ -39,7 +39,7 @@ services:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8081'"]
+      test: ["CMD", "bash", "/app/healthcheck.sh", "8081"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -59,9 +59,17 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
       WORKLOAD_SERVICE_URL: http://workload-service:8081
       WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:-change-me-internal-token}
+      ML_SERVICE_URL: http://attrition-ml-service:8082
+      ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-change-me-ml-token}
       FILE_STORAGE_PATH: /data/files
       SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-30}
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-20}
+    healthcheck:
+      test: ["CMD", "bash", "/app/healthcheck.sh", "8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
     ports:
       - "8080:8080"
     volumes:
@@ -74,9 +82,67 @@ services:
     networks:
       - backend
 
+  db-bootstrap:
+    image: mysql:8.4
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
+      DB_USERNAME: ${DB_USERNAME:-virtual_app}
+    entrypoint: ["bash", "/bootstrap/02-create-ml-database.sh"]
+    volumes:
+      - ./mysql-init:/bootstrap:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [backend]
+    restart: "no"
+
+  ml-migrations:
+    image: liquibase/liquibase:4.31.1
+    environment:
+      INSTALL_MYSQL: "true"
+      LIQUIBASE_COMMAND_URL: jdbc:mysql://mysql:3306/enterprise_ml?allowPublicKeyRetrieval=true&useSSL=false
+      LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME:-virtual_app}
+      LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      LIQUIBASE_COMMAND_CHANGELOG_FILE: changelog.xml
+    volumes:
+      - ./attrition-ml-service/db:/liquibase/changelog:ro
+    command: ["--search-path=/liquibase/changelog", "update"]
+    depends_on:
+      db-bootstrap:
+        condition: service_completed_successfully
+    networks: [backend]
+    restart: "no"
+
+  attrition-ml-service:
+    build:
+      context: .
+      dockerfile: attrition-ml-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      ML_DB_HOST: mysql
+      ML_DB_PORT: 3306
+      DB_USERNAME: ${DB_USERNAME:-virtual_app}
+      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-change-me-ml-token}
+      MODEL_STORAGE_PATH: /data/models
+    volumes:
+      - model_storage:/data/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,urllib.request; urllib.request.urlopen(urllib.request.Request('http://localhost:8082/internal/v1/health',headers={'X-Service-Token':os.environ['ML_SERVICE_TOKEN']}),timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      ml-migrations:
+        condition: service_completed_successfully
+    networks: [backend]
+
 volumes:
   mysql_data:
   file_storage:
+  model_storage:
 
 networks:
   backend:

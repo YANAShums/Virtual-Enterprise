@@ -16,3 +16,16 @@ jobs:
           cache: maven
       - name: Build and test
         run: mvn -B clean test
+
+  ml-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r attrition-ml-service/requirements-dev.txt
+      - run: python -m pytest attrition-ml-service/tests
+        env:
+          PYTHONPATH: attrition-ml-service
+      - run: docker compose config --quiet

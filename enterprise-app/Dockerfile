@@ -10,6 +10,7 @@ RUN mvn -pl enterprise-app -am clean package -DskipTests
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
+COPY tools/container-healthcheck.sh /app/healthcheck.sh
 COPY --from=build /workspace/enterprise-app/target/enterprise-app-*.jar app.jar
 RUN mkdir -p /data/files
 EXPOSE 8080

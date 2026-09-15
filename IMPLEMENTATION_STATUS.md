@@ -1,5 +1,25 @@
 # Статус реализации
 
+## FlowStaff AI — этап 1 (15.09.2026)
+
+Реализация инфраструктуры подготовлена; приёмка запуска пока НЕ завершена.
+
+- Добавлен attrition-ml-service (Python 3.12 / FastAPI), /health и защищённый /internal/v1/health.
+- ML readiness проверяет MySQL и наличие baseline Liquibase; 401 без токена, 503 при отказе БД.
+- Compose включает db-bootstrap для существующего тома, ml-migrations и отдельный том моделей.
+- Создание enterprise_ml автоматизировано. Старые Java migrations не изменены.
+- Java Docker health checks проверяют HTTP 200 вместо открытого TCP-порта.
+- Enterprise не зависит от запуска ML. MySQL host-port ограничен localhost.
+- CI дополнен pytest и проверкой Compose; .gitignore/.dockerignore исключают Python cache и локальную среду.
+- Проверки: mvn -B test — BUILD SUCCESS; pytest — 4 passed; docker compose config --quiet — успешно.
+- Docker build: Java-образы собраны, ML-образ остановился на сохранении слоя: read-only file system.
+- Подтверждённый блокер среды: на диске C: 0 ГБ свободно (D: около 63 ГБ).
+- НЕ проверены: запуск трёх сервисов, миграция на существующем/чистом томе, повторный запуск, сценарий отключения ML и login/dashboard в контейнерах.
+- После освобождения диска восстановить Docker Desktop, выполнить docker compose up -d --build и проверки из docs/flowstaff-stage-1.md. Только затем этап можно принять.
+- Обучение и прогнозы не реализовывались; model=NOT_TRAINED обозначает отсутствие обученной модели.
+
+Подробности: [этап 1](docs/flowstaff-stage-1.md).
+
 ## Реализовано в архиве
 
 - инфраструктура Maven multi-module;
