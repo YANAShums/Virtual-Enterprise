@@ -1,0 +1,5 @@
+.workload-legend { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:16px 0 24px; }.card .workload-legend { padding:20px 24px; }
+.workload-table { min-width:850px; }.workload-table .employee-col { min-width:240px; }.workload-table td:first-child { min-width:240px; position:sticky; left:0; z-index:1; background:#fff; box-shadow:1px 0 #eee; }
+.workload-table .fs-4 { font-size:20px!important; }.workload-table td { padding-top:12px; padding-bottom:12px; }
+.daily-strip { display:flex; gap:4px; }.day-cell { flex-shrink:0; min-width:84px; border:1px solid transparent; border-radius:7px; display:flex; flex-direction:column; gap:5px; text-align:center; padding:10px 6px; font-size:11px; }
+button.day-cell:hover { border-color:currentColor; }.day-cell strong { font-size:14px; font-weight:400; }.day-status { font-size:10px; }.workload-table .daily-strip { padding-right:8px; }

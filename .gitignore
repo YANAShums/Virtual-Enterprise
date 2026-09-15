@@ -1,0 +1,10 @@
+.idea/
+.vscode/
+.playwright-cli/
+*.iml
+**/target/
+.env
+/data/
+/output/
+*.log
+.DS_Store

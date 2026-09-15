@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Доска задач')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main id="mainContent" class="container-fluid board-page">
+ <div class="page-heading"><div class="heading-title"><span class="project-mark"><i class="bi bi-layout-three-columns" aria-hidden="true"></i></span><div><p class="eyebrow mb-1">Доски проектов</p><h1><th:block th:each="p:${projects}"><span th:if="${p.id == selectedProjectId}" th:text="${p.name}"></span></th:block><span th:if="${selectedProjectId == null}">Доска задач</span></h1></div></div>
+ <button class="btn btn-primary" th:disabled="${selectedProjectId == null}" data-bs-toggle="offcanvas" data-bs-target="#taskOffcanvas" sec:authorize="hasAnyRole('ADMIN','ENTERPRISE_MANAGER','DEPARTMENT_MANAGER','PROJECT_MANAGER')"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Создать задачу</button></div>
+ <nav class="view-tabs" aria-label="Представления проекта"><a th:if="${selectedProjectId != null}" th:href="@{/projects/{id}(id=${selectedProjectId})}">О проекте</a><a th:href="@{/tasks(projectId=${selectedProjectId})}">Список</a><a class="active" th:href="@{/kanban(projectId=${selectedProjectId})}" aria-current="page">Доска</a></nav>
+ <div class="board-toolbar">
+  <form method="get"><label class="visually-hidden" for="projectFilter">Проект</label><select name="projectId" id="projectFilter" class="form-select" onchange="this.form.submit()"><option th:if="${#lists.isEmpty(projects)}" value="">Нет проектов</option><option th:each="p:${projects}" th:value="${p.id}" th:selected="${selectedProjectId == p.id}" th:text="${p.code+' — '+p.name}"></option></select></form>
+  <div class="search-field"><i class="bi bi-search" aria-hidden="true"></i><input type="search" class="form-control" id="taskSearch" placeholder="Поиск по доске" aria-label="Поиск по задаче или исполнителю"></div>
+  <select id="priorityFilter" class="form-select" aria-label="Приоритет задачи"><option value="">Все приоритеты</option><option th:each="p:${priorities}" th:value="${p.code}" th:text="${p.name}"></option></select>
+  <label class="filter-check"><input type="checkbox" class="form-check-input m-0" id="overdueFilter">Просроченные</label>
+ </div>
+ <div th:replace="~{fragments/ui :: flash}"></div><div id="boardAlert" role="status" aria-live="polite"></div>
+ <div th:if="${selectedProjectId == null}" th:insert="~{fragments/ui :: empty('Проектов пока нет', 'Создайте проект, чтобы открыть его доску.')}"></div>
+ <p class="scroll-hint"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Прокрутите доску, чтобы увидеть остальные статусы</p>
+ <div class="kanban-board" th:if="${selectedProjectId != null}" id="kanbanBoard">
+ <section class="kanban-column" th:each="status:${statuses}" th:data-status="${status.code}">
+  <div class="kanban-column-header"><strong th:text="${status.name}"></strong><span class="badge" th:text="${#lists.size(tasksByStatus.get(status.code))}"></span></div>
+  <div class="kanban-dropzone" th:data-status="${status.code}">
+   <article class="task-card" draggable="true" data-task-record th:each="task:${tasksByStatus.get(status.code)}" th:data-search="${task.taskNumber+' '+task.title+' '+(task.assignee != null ? task.assignee.fullName : '')}" th:data-priority="${task.priority.code}" th:data-overdue="${task.overdue}" th:data-task-id="${task.id}" th:data-version="${task.version}" th:data-status="${task.status.code}">
+    <div class="task-card-top"><div class="task-card-identity"><span class="assignee-icon" th:title="${task.assignee != null ? task.assignee.fullName : 'Не назначен'}"><i class="bi bi-person-circle" aria-hidden="true"></i><span class="visually-hidden" th:text="${task.assignee != null ? task.assignee.fullName : 'Не назначен'}"></span></span><a class="task-number" th:href="@{/tasks/{id}(id=${task.id})}" th:text="${task.taskNumber}"></a></div><div class="task-card-icons"><i class="bi bi-arrow-up-circle-fill priority-icon" th:data-priority="${task.priority.code}" th:title="${'Приоритет: '+task.priority.name}" th:aria-label="${'Приоритет: '+task.priority.name}"></i><i class="bi bi-file-earmark-text" title="Задача" aria-hidden="true"></i></div></div>
+    <h3><a th:href="@{/tasks/{id}(id=${task.id})}" th:text="${task.title}"></a></h3>
+    <div class="task-card-bottom"><div class="task-status-wrap"><select class="form-select task-status-select" aria-label="Изменить статус задачи" th:disabled="${!#authorization.expression('hasAnyRole(''ADMIN'',''ENTERPRISE_MANAGER'',''DEPARTMENT_MANAGER'',''PROJECT_MANAGER'')') and (task.assignee == null or task.assignee.user == null or task.assignee.user.username != #authentication.name)}"><option th:each="s:${statuses}" th:value="${s.code}" th:selected="${s.code == task.status.code}" th:text="${s.name}"></option></select></div><span class="task-card-date" th:classappend="${task.overdue} ? 'text-danger'" th:title="${task.overdue ? 'Просрочено' : 'Дедлайн'}"><i class="bi bi-calendar4 me-1" aria-hidden="true"></i><span th:text="${#temporals.format(task.plannedEndDate,'dd.MM')}"></span></span></div>
+    <div class="task-card-extra"><span class="small text-secondary"><i class="bi bi-clock me-1" aria-hidden="true"></i><span th:text="${task.plannedHours+' ч'}"></span></span><th:block th:if="${task.assignee != null and loadByEmployee.get(task.assignee.id) != null}"><span th:replace="~{fragments/ui :: workload(${loadByEmployee.get(task.assignee.id)})}"></span></th:block></div>
+   </article><div class="kanban-empty">В этом статусе задач нет</div>
+  </div>
+ </section></div>
+</main>
+<div class="offcanvas offcanvas-end task-offcanvas" tabindex="-1" id="taskOffcanvas" aria-labelledby="taskOffcanvasLabel">
+    <div class="offcanvas-header border-bottom"><div><h2 class="offcanvas-title h5" id="taskOffcanvasLabel">Новая задача</h2><p class="text-secondary small mb-0">Заполните параметры и выберите исполнителя</p></div><button type="button" aria-label="Закрыть" class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+    <div class="offcanvas-body">
+        <div id="taskFormAlert" role="alert"></div>
+        <form id="taskCreateForm" novalidate><h3 class="form-section-title">Основное</h3>
+            <div class="mb-3"><label class="form-label" for="taskTitle">Название *</label><input id="taskTitle" class="form-control" minlength="3" maxlength="255" required></div>
+            <div class="mb-3"><label class="form-label" for="taskDescription">Описание</label><textarea id="taskDescription" class="form-control" rows="3"></textarea></div>
+            <div class="mb-3"><label class="form-label" for="taskProject">Проект *</label><select id="taskProject" class="form-select" required><option th:each="p:${projects}" th:value="${p.id}" th:selected="${selectedProjectId == p.id}" th:text="${p.code + ' — ' + p.name}"></option></select></div>
+            <h3 class="form-section-title">Планирование</h3><div class="row g-3 mb-3"><div class="col-6"><label class="form-label" for="taskStart">Дата начала *</label><input id="taskStart" type="date" class="form-control" required></div><div class="col-6"><label class="form-label" for="taskEnd">Дата завершения *</label><input id="taskEnd" type="date" class="form-control" required></div></div>
+            <div class="row g-3 mb-3"><div class="col-6"><label class="form-label" for="taskHours">Трудоёмкость, ч *</label><input id="taskHours" type="number" min="0.25" step="0.25" class="form-control" value="8" required></div><div class="col-6"><label class="form-label" for="taskPriority">Приоритет *</label><select id="taskPriority" class="form-select"><option th:each="priority:${priorities}" th:value="${priority.code}" th:text="${priority.name}" th:selected="${priority.code == 'MEDIUM'}"></option></select></div></div>
+
+            <h3 class="form-section-title">Исполнитель</h3><div class="d-flex justify-content-between align-items-center mb-2"><span class="form-label mb-0">Исполнитель *</span><button type="button" id="previewButton" class="btn btn-sm btn-outline-primary"><i aria-hidden="true" class="bi bi-calculator me-1"></i>Рассчитать</button></div>
+            <div id="candidateHint" class="small text-secondary mb-2">Укажите даты и часы, затем выполните расчёт.</div>
+            <div role="status" aria-live="polite" id="candidateResults" class="candidate-list mb-3"></div>
+
+            <div id="criticalConfirmation" class="alert alert-danger d-none"><p id="criticalMessage" class="fw-semibold"></p>
+                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="overloadConfirmed"><label class="form-check-label fw-semibold" for="overloadConfirmed">Подтверждаю назначение при критической перегрузке</label></div>
+                <label class="form-label small" for="overloadReason">Причина</label><select id="overloadReason" class="form-select form-select-sm"><option value="CRITICAL_TASK">Критически важная задача</option><option value="UNIQUE_SKILLS">Уникальные компетенции</option><option value="TEMPORARY_OVERLOAD">Временная согласованная перегрузка</option><option value="MANAGER_APPROVAL">Решение руководителя</option><option value="OTHER">Другая причина</option></select>
+            </div>
+        </form>
+    </div>
+    <div class="task-form-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Отмена</button><button type="submit" form="taskCreateForm" class="btn btn-primary" id="createTaskButton" disabled title="Сначала рассчитайте загрузку и выберите исполнителя"><i aria-hidden="true" class="bi bi-check2-circle me-2"></i>Создать задачу</button></div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div><script th:src="@{/js/task-status.js}"></script><script th:src="@{/js/kanban.js}"></script></body></html>

@@ -1,0 +1,30 @@
+async (page) => {
+  const results=[];
+  await page.goto('http://localhost:8080/dashboard');
+  await page.getByRole('button',{name:'Меню аккаунта'}).click();
+  await page.getByRole('button',{name:'Выйти из аккаунта'}).click();
+  await page.locator('#username').fill('employee');
+  await page.locator('#password').fill('employee123');
+  await page.getByRole('button',{name:'Войти',exact:true}).click();
+  await page.waitForURL('**/dashboard');
+  await page.goto('http://localhost:8080/kanban?projectId=1');
+  results.push({check:'employee cannot create tasks',pass:await page.getByRole('button',{name:'Создать задачу',exact:true}).count()===0});
+  results.push({check:'employee has own task and locked other tasks',pass:await page.locator('.task-status-select:not(:disabled)').count()===1 && await page.locator('.task-status-select:disabled').count()>0});
+  await page.goto('http://localhost:8080/tasks?mine=true');
+  const assignees=await page.locator('tbody tr td:nth-child(2)').allTextContents();
+  results.push({check:'mine uses signed-in employee',pass:assignees.length>0 && assignees.every(name=>name.trim()==='Иванов Иван Сергеевич') && (await page.locator('tbody').textContent()).includes('Реализовать API сотрудников'),count:assignees.length});
+  const response=await page.goto('http://localhost:8080/admin');
+  results.push({check:'admin page denied',pass:response.status()===403});
+  await page.goto('http://localhost:8080/dashboard');
+  await page.getByRole('button',{name:'Меню аккаунта'}).click();
+  await page.getByRole('button',{name:'Выйти из аккаунта'}).click();
+  await page.setViewportSize({width:1440,height:960});
+  await page.screenshot({path:'output/playwright/tracker-final/login.png'});
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:'output/playwright/tracker-final/mobile-login.png'});
+  await page.locator('#username').fill('admin');
+  await page.locator('#password').fill('admin123');
+  await page.getByRole('button',{name:'Войти',exact:true}).click();
+  await page.waitForURL('**/dashboard');
+  return results;
+}

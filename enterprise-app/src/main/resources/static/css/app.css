@@ -1,0 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+@import url('./tokens.css');
+@import url('./base.css');
+@import url('./layout.css');
+@import url('./components.css');
+@import url('./pages/dashboard.css');
+@import url('./pages/employees.css');
+@import url('./pages/kanban.css');
+@import url('./pages/workload.css');
+@import url('./pages/admin.css');
+@import url('./theme-accent.css');

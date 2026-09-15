@@ -1,0 +1,83 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: virtual-enterprise-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
+      DB_USERNAME: ${DB_USERNAME:-virtual_app}
+      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root_password_change_me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  workload-service:
+    build:
+      context: .
+      dockerfile: workload-service/Dockerfile
+    container_name: virtual-enterprise-workload
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      WORKLOAD_DB_URL: jdbc:mysql://mysql:3306/enterprise_workload?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      DB_USERNAME: ${DB_USERNAME:-virtual_app}
+      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:-change-me-internal-token}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8081'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - backend
+
+  enterprise-app:
+    build:
+      context: .
+      dockerfile: enterprise-app/Dockerfile
+    container_name: virtual-enterprise-app
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CORE_DB_URL: jdbc:mysql://mysql:3306/enterprise_core?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      DB_USERNAME: ${DB_USERNAME:-virtual_app}
+      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      WORKLOAD_SERVICE_URL: http://workload-service:8081
+      WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:-change-me-internal-token}
+      FILE_STORAGE_PATH: /data/files
+      SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-30}
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-20}
+    ports:
+      - "8080:8080"
+    volumes:
+      - file_storage:/data/files
+    depends_on:
+      mysql:
+        condition: service_healthy
+      workload-service:
+        condition: service_healthy
+    networks:
+      - backend
+
+volumes:
+  mysql_data:
+  file_storage:
+
+networks:
+  backend:
+    driver: bridge

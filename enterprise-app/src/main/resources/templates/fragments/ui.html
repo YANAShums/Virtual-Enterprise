@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="empty(title, description)" class="empty-state">
+    <i class="bi bi-inbox" aria-hidden="true"></i>
+    <h3 th:text="${title}"></h3>
+    <p th:text="${description}"></p>
+</div>
+
+<span th:fragment="workloadStatus(status)" class="workload-badge"
+      th:classappend="${' workload-' + #strings.toLowerCase(status.name())}"
+      th:title="${status.name()}" th:switch="${status.name()}">
+    <span th:case="'SEVERE_UNDERLOAD'">Сильно ниже нормы</span>
+    <span th:case="'UNDERLOAD'">Ниже нормы</span>
+    <span th:case="'NORMAL'">Норма</span>
+    <span th:case="'WARNING'">Повышенная</span>
+    <span th:case="'CRITICAL'">Критическая</span>
+    <span th:case="'UNAVAILABLE'">Нет данных</span>
+    <span th:case="*" th:text="${status}"></span>
+</span>
+
+<span th:fragment="workload(load)" class="workload-badge"
+      th:classappend="${' workload-' + #strings.toLowerCase(load.status.name())}"
+      th:title="${load.status.name()}">
+    <span th:text="${load.projectedLoadPercent + '%'}"></span><span aria-hidden="true"> · </span>
+    <th:block th:switch="${load.status.name()}">
+        <span th:case="'SEVERE_UNDERLOAD'">сильно ниже нормы</span>
+        <span th:case="'UNDERLOAD'">ниже нормы</span>
+        <span th:case="'NORMAL'">норма</span>
+        <span th:case="'WARNING'">повышенная</span>
+        <span th:case="'CRITICAL'">критическая</span>
+        <span th:case="'UNAVAILABLE'">нет данных</span>
+        <span th:case="*" th:text="${load.status}"></span>
+    </th:block>
+</span>
+
+<span th:fragment="projectStatus(status)" class="badge"
+      th:classappend="${status == 'ACTIVE' ? ' text-bg-success' : (status == 'PLANNED' ? ' text-bg-primary' : ' text-bg-light')}"
+      th:switch="${status}">
+    <span th:case="'ACTIVE'">Активный</span><span th:case="'PLANNED'">Запланирован</span><span th:case="'PAUSED'">Приостановлен</span><span th:case="'COMPLETED'">Завершён</span><span th:case="'CANCELLED'">Отменён</span><span th:case="*" th:text="${status}"></span>
+</span>
+
+<span th:fragment="risk(risk)" class="badge"
+      th:classappend="${risk == 'HIGH' ? ' text-bg-warning' : ' text-bg-light'}" th:switch="${risk}">
+    <span th:case="'LOW'">Низкий</span><span th:case="'MEDIUM'">Средний</span><span th:case="'HIGH'">Высокий</span><span th:case="*" th:text="${risk}"></span>
+</span>
+
+<span th:fragment="employeeStatus(status)" class="badge"
+      th:classappend="${status == 'ACTIVE' ? ' text-bg-success' : ' text-bg-light'}"
+      th:switch="${status}">
+    <span th:case="'ACTIVE'">Активен</span><span th:case="'INACTIVE'">Неактивен</span><span th:case="'DISMISSED'">Уволен</span><span th:case="*" th:text="${status}"></span>
+</span>
+
+<span th:fragment="priority(priority)" class="badge"
+      th:classappend="${priority == 'CRITICAL' or priority == 'HIGH' ? ' text-bg-warning' : ' text-bg-light'}"
+      th:switch="${priority}">
+    <span th:case="'LOW'">Низкий</span><span th:case="'MEDIUM'">Средний</span><span th:case="'HIGH'">Высокий</span><span th:case="'CRITICAL'">Критический</span><span th:case="*" th:text="${priority}"></span>
+</span>
+
+<span th:fragment="state(status)" class="badge"
+      th:classappend="${status.toString() == 'ACTIVE' or status.toString() == 'APPROVED' ? ' text-bg-success' : ' text-bg-light'}"
+      th:switch="${status.toString()}">
+    <span th:case="'ACTIVE'">Активен</span><span th:case="'INACTIVE'">Неактивен</span><span th:case="'DISABLED'">Отключён</span><span th:case="'APPROVED'">Подтверждено</span><span th:case="'REQUESTED'">На рассмотрении</span><span th:case="'REJECTED'">Отклонено</span><span th:case="'CANCELLED'">Отменено</span><span th:case="*" th:text="${status}"></span>
+</span>
+
+<div th:fragment="flash" th:if="${param.created}" class="alert alert-success" role="status">
+    <i class="bi bi-check-circle me-2" aria-hidden="true"></i>Данные успешно сохранены.
+</div>
+
+<div th:fragment="legend" class="workload-legend" aria-label="Обозначения загрузки">
+    <span class="workload-badge workload-underload">Недогрузка</span>
+    <span class="workload-badge workload-normal">Норма</span>
+    <span class="workload-badge workload-warning">Повышенная</span>
+    <span class="workload-badge workload-critical">Критическая</span>
+    <span class="workload-badge workload-unavailable">Нет данных</span>
+</div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Загруженность')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<main id="mainContent" tabindex="-1" class="container-fluid px-4 py-4">
+    <div class="page-heading"><h1>Загруженность</h1></div><div class="view-tabs"><a class="active" href="/workload" aria-current="page">По сотрудникам</a><a href="/employees">Команда</a></div>
+    <form method="get" class="filter-row"><div ><label class="form-label" for="departmentId">Подразделение</label><select id="departmentId" name="departmentId" class="form-select"><option value="">Все подразделения</option><option th:each="d:${departments}" th:value="${d.id}" th:selected="${departmentId == d.id}" th:text="${d.name}"></option></select></div><div ><label class="form-label" for="start">Начало</label><input id="start" type="date" name="start" class="form-control" th:value="${start}"></div><div ><label class="form-label" for="end">Окончание</label><input id="end" type="date" name="end" class="form-control" th:value="${end}"></div><div class="filter-action"><button class="btn btn-outline-secondary">Показать</button></div></form>
+    <div th:if="${workloadError}" class="alert alert-danger" th:text="${workloadError}"></div>
+
+    <div class="workload-view">
+        <div th:replace="~{fragments/ui :: legend}"></div>
+        <p class="scroll-hint"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Прокрутите вправо, чтобы увидеть весь период</p>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table align-middle workload-table mb-0">
+            <thead><tr><th class="employee-col">Сотрудник</th><th>За период</th><th>Статус</th><th>Дневная детализация</th></tr></thead>
+            <tbody><tr th:each="result:${results}">
+                <td><a th:href="@{/employees/{id}(id=${result.employeeId})}" th:text="${result.fullName}"></a><div class="small text-secondary" th:text="${'Сейчас: ' + result.currentLoadPercent + '%'}"></div></td>
+                <td><div class="fs-4 fw-semibold" th:text="${result.projectedLoadPercent + '%'}"></div></td>
+                <td><span th:replace="~{fragments/ui :: workloadStatus(${result.status})}"></span></td>
+                <td><div class="daily-strip"><button type="button" data-bs-toggle="offcanvas" data-bs-target="#dayDetails" class="day-cell" th:data-employee-id="${result.employeeId}" th:data-employee="${result.fullName}" th:data-date="${day.date}" th:data-available="${day.availableHours}" th:data-assigned="${day.assignedHours}" th:data-percent="${day.projectedLoadPercent}" th:data-status="${day.status}" th:each="day:${result.daily}" th:classappend="${' workload-bg-' + #strings.toLowerCase(day.status.name())}" th:title="${#temporals.format(day.date,'dd.MM.yyyy') + ': ' + day.assignedHours + ' из ' + day.availableHours + ' ч'}" th:aria-label="${#temporals.format(day.date,'dd.MM.yyyy') + ', загрузка ' + day.projectedLoadPercent + '%'}"><span th:text="${#temporals.format(day.date,'dd.MM')}"></span><strong th:text="${day.projectedLoadPercent + '%'}"></strong><span class="day-status" th:switch="${day.status.name()}"><span th:case="'SEVERE_UNDERLOAD'">Сильно ниже</span><span th:case="'UNDERLOAD'">Ниже нормы</span><span th:case="'NORMAL'">Норма</span><span th:case="'WARNING'">Повышена</span><span th:case="'CRITICAL'">Критическая</span><span th:case="'UNAVAILABLE'">Нет данных</span><span th:case="*" th:text="${day.status}"></span></span></button></div></td>
+            </tr><tr th:if="${#lists.isEmpty(results)}"><td colspan="4" class="text-center py-5 text-secondary">Нет данных за выбранный период. Измените даты или подразделение.</td></tr></tbody>
+        </table></div></div>
+    </div>
+</main>
+<aside class="offcanvas offcanvas-end task-offcanvas" tabindex="-1" id="dayDetails" aria-labelledby="dayTitle"><div class="offcanvas-header border-bottom"><h2 class="offcanvas-title h5" id="dayTitle">Загрузка за день</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Закрыть"></button></div><div class="offcanvas-body"><p class="eyebrow" id="dayDate"></p><h3 class="h4" id="dayEmployee"></h3><div class="workload-summary" id="dayPercent"></div><dl class="detail-list"><dt>Доступно</dt><dd id="dayAvailable"></dd><dt>Назначено</dt><dd id="dayAssigned"></dd><dt>Состояние</dt><dd id="dayStatus"></dd></dl><p class="small text-secondary mt-4">Загрузка рассчитана с учётом рабочего графика и отсутствий сотрудника.</p><a id="dayEmployeeLink" th:href="@{/employees}" class="btn btn-outline-primary mt-3">Карточка сотрудника<i aria-hidden="true" class="bi bi-arrow-right ms-2"></i></a></div></aside>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

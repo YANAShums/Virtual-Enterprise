@@ -1,0 +1,5 @@
+.employee-table { min-width:930px; }.employee-table td:first-child { min-width:260px; }.employee-table .avatar { margin-right:4px; }
+.projects-table { min-width:820px; }.projects-table .project-title { display:flex; align-items:center; gap:12px; }.projects-table .project-mark { width:34px; height:34px; font-size:12px; border-radius:9px; }
+.projects-table .project-progress { min-width:100px; max-width:160px; }.projects-table .project-progress .progress { margin-top:6px; }
+.member-row { display:flex; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid #eee; }.member-row:last-child { border:0; }
+.profile-panels>[data-tab-panel] { scroll-margin-top:80px; }

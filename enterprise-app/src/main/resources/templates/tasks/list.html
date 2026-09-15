@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><head th:replace="~{fragments/layout :: head('Задачи')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main id="mainContent" class="container-fluid">
+<div class="page-heading"><h1>Задачи <span class="text-secondary" th:text="${#lists.size(tasks)}"></span></h1><a class="btn btn-primary" sec:authorize="hasAnyRole('ADMIN','ENTERPRISE_MANAGER','DEPARTMENT_MANAGER','PROJECT_MANAGER')" th:href="@{/kanban(projectId=${projectId},create=1)}"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Создать задачу</a></div>
+<nav class="view-tabs" aria-label="Списки задач"><a th:href="@{/tasks(projectId=${projectId})}" th:classappend="${!mine} ? 'active'">Все задачи</a><a th:href="@{/tasks(projectId=${projectId},mine=true)}" th:classappend="${mine} ? 'active'">Назначены мне</a><a th:href="@{/kanban(projectId=${projectId})}">Доска</a></nav>
+<form method="get" th:action="@{/tasks}" class="toolbar"><input type="hidden" name="mine" th:value="${mine}">
+<div class="search-field"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" name="q" type="search" th:value="${q}" placeholder="Название, ключ или исполнитель" aria-label="Поиск задач"></div>
+<select class="form-select" name="projectId" aria-label="Проект"><option value="">Все проекты</option><option th:each="p:${projects}" th:value="${p.id}" th:selected="${projectId == p.id}" th:text="${p.name}"></option></select>
+<select class="form-select" name="status" aria-label="Статус"><option value="">Все статусы</option><option th:each="s:${statuses}" th:value="${s.code}" th:selected="${status == s.code}" th:text="${s.name}"></option></select>
+<label class="filter-check"><input type="checkbox" name="overdue" value="true" class="form-check-input m-0" th:checked="${overdue}">Просроченные</label>
+<button class="btn btn-outline-secondary">Найти</button><a class="btn btn-ghost" th:href="@{/tasks}">Сбросить</a>
+</form><div th:replace="~{fragments/tasks :: table(${tasks})}"></div>
+</main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><head th:replace="~{fragments/layout :: head('Сотрудники')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main id="mainContent" class="container-fluid">
+<div class="page-heading"><h1>Сотрудники</h1><a sec:authorize="hasRole('ADMIN')" th:href="@{/employees/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Добавить сотрудника</a></div>
+<div class="view-tabs"><a class="active" th:href="@{/employees}" aria-current="page">Команда <span class="text-secondary ms-1" th:text="${#lists.size(employees)}"></span></a><a th:href="@{/workload}">Загруженность</a></div><form method="get" class="filter-row">
+        <div ><label class="form-label" for="departmentId">Подразделение</label><select id="departmentId" name="departmentId" class="form-select"><option value="">Все подразделения</option><option th:each="d:${departments}" th:value="${d.id}" th:selected="${departmentId == d.id}" th:text="${d.name}"></option></select></div>
+        <div ><label class="form-label" for="loadStatus">Уровень загрузки</label><select id="loadStatus" name="loadStatus" class="form-select"><option value="">Все уровни</option><option value="SEVERE_UNDERLOAD" th:selected="${loadStatus == 'SEVERE_UNDERLOAD'}">Сильно ниже нормы</option><option value="UNDERLOAD" th:selected="${loadStatus == 'UNDERLOAD'}">Ниже нормы</option><option value="NORMAL" th:selected="${loadStatus == 'NORMAL'}">Норма</option><option value="WARNING" th:selected="${loadStatus == 'WARNING'}">Повышенная</option><option value="CRITICAL" th:selected="${loadStatus == 'CRITICAL'}">Критическая</option><option value="UNAVAILABLE" th:selected="${loadStatus == 'UNAVAILABLE'}">Нет данных</option></select></div>
+        <div ><label class="form-label" for="sort">Сортировка</label><select id="sort" name="sort" class="form-select"><option value="name" th:selected="${sort == 'name'}">По ФИО</option><option value="loadDesc" th:selected="${sort == 'loadDesc'}">По загрузке ↓</option></select></div>
+        <div class="filter-action"><button class="btn btn-outline-secondary">Применить</button></div><div class="filter-action"><a th:href="@{/employees}" class="btn btn-ghost">Сбросить</a></div>
+    </form>
+<div class="toolbar"><div class="search-field"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" id="employeeSearch" data-filter-target=".employee-row" type="search" aria-label="Поиск сотрудника" placeholder="Имя, email или должность"></div><span class="small text-secondary">Загрузка на ближайшие 7 дней</span></div><div th:replace="~{fragments/ui :: flash}"></div><div class="table-responsive"><table class="table employee-table table-hover align-middle mb-0">
+            <thead><tr><th>Сотрудник</th><th>Должность и ставка</th><th>Подразделение</th><th>Загрузка</th><th>Статус</th><th><span class="visually-hidden">Действия</span></th></tr></thead>
+            <tbody>
+            <tr class="employee-row" th:each="employee:${employees}">
+                <td><div class="d-flex align-items-center gap-2"><div class="avatar" th:text="${#strings.substring(employee.firstName,0,1) + #strings.substring(employee.lastName,0,1)}">ИИ</div><div><a class="employee-name" th:href="@{/employees/{id}(id=${employee.id})}" th:text="${employee.fullName}"></a><div class="small text-secondary" th:text="${employee.email ?: employee.personnelNumber}"></div></div></div></td>
+                <td><span th:text="${employee.position.name}"></span><div class="small text-secondary" th:text="${'Ставка ' + employee.employmentRate * 100 + '%'}"></div></td>
+                <td><span class="badge rounded-pill text-bg-light" th:text="${employee.department.name}"></span></td>
+                <td><div th:with="load=${loadByEmployee.get(employee.id)}"><th:block th:if="${load != null}"><span th:replace="~{fragments/ui :: workload(${load})}"></span></th:block><span th:if="${load == null}" class="text-secondary">Нет данных</span></div></td>
+                <td><span th:replace="~{fragments/ui :: employeeStatus(${employee.status})}"></span></td>
+                <td class="text-end"><a class="btn btn-ghost btn-icon" th:href="@{/employees/{id}(id=${employee.id})}" th:aria-label="${'Открыть карточку сотрудника ' + employee.fullName}"><i class="bi bi-arrow-right" aria-hidden="true"></i></a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(employees)}"><td colspan="6"><div th:replace="~{fragments/ui :: empty('Сотрудники не найдены', 'Измените фильтры или добавьте первого сотрудника.')}"></div></td></tr>
+            <tr data-filter-empty hidden><td colspan="6" class="empty-state">По вашему запросу ничего не найдено. Измените поисковую фразу.</td></tr>
+            </tbody>
+        </table></div>
+</main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>

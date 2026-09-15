@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Моя страница')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main id="mainContent" class="container-fluid">
+ <div class="page-heading"><h1>Моя страница</h1><a class="btn btn-outline-secondary" th:href="@{/tasks(mine=true)}"><i class="bi bi-person me-2" aria-hidden="true"></i>Назначены мне</a></div>
+ <div class="view-tabs"><a class="active" th:href="@{/dashboard}" aria-current="page">Обзор предприятия</a><a th:href="@{/tasks}">Все задачи</a></div>
+ <div class="dashboard-stats">
+  <a class="dashboard-stat task-title-link" th:href="@{/tasks}"><strong th:text="${activeTaskCount}"></strong><span>Активных задач</span></a>
+  <a class="dashboard-stat task-title-link" th:href="@{/tasks(overdue=true)}"><strong th:classappend="${overdueCount > 0} ? 'text-danger'" th:text="${overdueCount}"></strong><span>Просрочено</span></a>
+  <a class="dashboard-stat task-title-link" th:href="@{/projects}"><strong th:text="${projectCount}"></strong><span>Активных проектов</span></a>
+  <a class="dashboard-stat task-title-link" th:href="@{/employees}"><strong th:text="${employeeCount}"></strong><span>Сотрудников</span></a>
+ </div>
+ <div th:if="${workloadError}" class="alert alert-warning" role="status" th:text="${workloadError}"></div>
+ <div class="dashboard-grid"><div class="dashboard-main">
+  <section class="widget"><div class="widget-heading"><h2>Ближайшие сроки</h2><a th:href="@{/tasks}">Все задачи <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+   <div class="task-widget-row" th:each="task:${deadlines}">
+    <i class="bi bi-file-earmark-text text-secondary" aria-hidden="true"></i><div class="task-copy"><a th:href="@{/tasks/{id}(id=${task.id})}" th:text="${task.title}"></a><small th:text="${task.taskNumber}"></small><span class="status-pill ms-2" th:data-status="${task.status.code}" th:text="${task.status.name}"></span></div>
+    <span class="task-due" th:classappend="${task.overdue} ? 'text-danger'" th:text="${#temporals.format(task.plannedEndDate,'dd.MM.yyyy')}"></span>
+   </div><div th:if="${#lists.isEmpty(deadlines)}" th:insert="~{fragments/ui :: empty('Нет предстоящих задач', 'Задачи с ближайшими сроками появятся здесь.')}"></div>
+  </section>
+  <section class="widget"><div class="widget-heading"><h2>Загрузка подразделений</h2><a th:href="@{/workload}">Подробнее <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><p class="section-note mb-4"><span th:text="${#temporals.format(periodStart,'dd.MM')}"></span> — <span th:text="${#temporals.format(periodEnd,'dd.MM.yyyy')}"></span> · средняя загрузка за период</p>
+   <div class="department-bar" th:each="department:${departmentLoads}"><div class="d-flex justify-content-between mb-2"><span th:text="${department.name}"></span><span th:text="${department.percent+'%'}"></span></div><div class="progress" role="img" th:aria-label="${department.name+': '+department.percent+'%'}"><div class="progress-bar" th:style="${'width:min('+department.percent+'%,100%)'}"></div></div></div>
+   <p th:if="${#lists.isEmpty(departmentLoads)}" class="text-secondary mb-0">Нет данных о загрузке подразделений.</p>
+  </section>
+ </div><aside class="dashboard-aside">
+  <section class="widget"><div class="widget-heading"><h2>Проекты</h2><a th:href="@{/projects}">Все</a></div><div class="project-widget-row" th:each="project:${projects}"><span class="project-mark" th:text="${#strings.substring(project.code,0,T(java.lang.Math).min(2,project.code.length()))}"></span><div><a th:href="@{/projects/{id}(id=${project.id})}" th:text="${project.name}"></a><div class="small text-secondary mt-1" th:text="${project.code}"></div></div></div><p th:if="${#lists.isEmpty(projects)}" class="text-secondary">Проектов пока нет.</p></section>
+  <section class="widget"><div class="widget-heading"><h2>Загрузка команды</h2></div><div class="d-flex justify-content-between mb-3"><span class="text-secondary">Средняя</span><strong th:text="${averageLoad != null ? averageLoad+'%' : 'Нет данных'}"></strong></div><div class="d-flex justify-content-between"><span class="text-secondary">Выше нормы</span><strong th:text="${overloadedCount != null ? overloadedCount : 'Нет данных'}"></strong></div>
+   <div class="mt-4" th:each="load:${overloaded}"><a th:href="@{/employees/{id}(id=${load.employeeId})}" th:text="${load.fullName}"></a><div class="mt-1"><span th:replace="~{fragments/ui :: workload(${load})}"></span></div></div>
+   <a class="btn btn-outline-secondary w-100 mt-4" th:href="@{/workload}">Открыть загрузку</a>
+  </section>
+ </aside></div>
+</main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>

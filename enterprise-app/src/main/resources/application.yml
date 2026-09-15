@@ -1,0 +1,48 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: ${SESSION_TIMEOUT_MINUTES:30}m
+      cookie:
+        http-only: true
+        same-site: lax
+
+spring:
+  application:
+    name: enterprise-app
+  datasource:
+    url: ${CORE_DB_URL:jdbc:mysql://localhost:3307/enterprise_core?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:virtual_app}
+    password: ${DB_PASSWORD:virtual_app_password}
+  jpa:
+    open-in-view: true
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  thymeleaf:
+    cache: false
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE_MB:20}MB
+      max-request-size: ${MAX_FILE_SIZE_MB:20}MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+workload:
+  base-url: ${WORKLOAD_SERVICE_URL:http://localhost:8081}
+  service-token: ${WORKLOAD_SERVICE_TOKEN:change-me-internal-token}
+
+file-storage:
+  path: ${FILE_STORAGE_PATH:./data/files}
