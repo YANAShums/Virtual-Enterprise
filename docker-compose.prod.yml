@@ -1,0 +1,67 @@
+# Single-host TLS verification profile. Separate physical nodes are described in docs/DEPLOYMENT.md.
+# Requires Docker Compose >= 2.24.4 (!override / !reset).
+services:
+  mysql:
+    ports: !reset []
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping -h localhost -uroot --silent']
+  db-bootstrap:
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+  ml-migrations:
+    environment:
+      LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+  enterprise-app:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:?Set WORKLOAD_SERVICE_TOKEN}
+      ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:?Set ML_SERVICE_TOKEN}
+      WORKLOAD_SERVICE_URL: https://workload-service:8081
+      ML_SERVICE_URL: https://attrition-ml-service:8082
+      TLS_CERTIFICATE: file:/run/tls/enterprise.crt
+      TLS_PRIVATE_KEY: file:/run/tls/enterprise.key
+      # Use a JVM truststore containing the internal CA; no trust-all clients.
+      JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/run/tls/truststore.jks -Djavax.net.ssl.trustStoreType=JKS
+    ports: !override
+      - "${HTTPS_BIND_ADDRESS:-127.0.0.1}:8443:8080"
+    volumes:
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/enterprise.crt:/run/tls/enterprise.crt:ro
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/enterprise.key:/run/tls/enterprise.key:ro
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/truststore.jks:/run/tls/truststore.jks:ro
+    healthcheck:
+      test: ["CMD", "bash", "/app/healthcheck.sh", "8083"]
+  workload-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:?Set WORKLOAD_SERVICE_TOKEN}
+      TLS_CERTIFICATE: file:/run/tls/workload.crt
+      TLS_PRIVATE_KEY: file:/run/tls/workload.key
+    volumes:
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/workload.crt:/run/tls/workload.crt:ro
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/workload.key:/run/tls/workload.key:ro
+    healthcheck:
+      test: ["CMD", "bash", "/app/healthcheck.sh", "8083"]
+  attrition-ml-service:
+    environment:
+      ML_PROFILE: prod
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:?Set ML_SERVICE_TOKEN}
+      TLS_CERTIFICATE: /run/tls/ml.crt
+      TLS_PRIVATE_KEY: /run/tls/ml.key
+      TLS_CA_FILE: /run/tls/ca.crt
+      ML_HEALTH_HOST: attrition-ml-service
+    volumes:
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/ml.crt:/run/tls/ml.crt:ro
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/ml.key:/run/tls/ml.key:ro
+      - ${TLS_DIRECTORY:?Set TLS_DIRECTORY}/ca.crt:/run/tls/ca.crt:ro

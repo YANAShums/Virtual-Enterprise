@@ -1,0 +1,31 @@
+# Production requires external credentials and certificate files.
+server:
+  ssl:
+    enabled: true
+    certificate: ${TLS_CERTIFICATE}
+    certificate-private-key: ${TLS_PRIVATE_KEY}
+    enabled-protocols: TLSv1.2,TLSv1.3
+  servlet:
+    session:
+      cookie:
+        secure: true
+spring:
+  datasource:
+    url: ${CORE_DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  thymeleaf:
+    cache: true
+workload:
+  base-url: ${WORKLOAD_SERVICE_URL}
+  service-token: ${WORKLOAD_SERVICE_TOKEN}
+ml:
+  base-url: ${ML_SERVICE_URL}
+  service-token: ${ML_SERVICE_TOKEN}
+# Container-local probe; do not publish this port.
+management:
+  server:
+    address: 127.0.0.1
+    port: 8083
+    ssl:
+      enabled: false

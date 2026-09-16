@@ -1,6 +1,39 @@
 # FlowStaff AI — этап 1
 
-Источник: FlowStaff_AI_Техническое_задание_и_план_реализации.docx, версия 2.0, разделы 7, 15 и 17.
+Источник: FlowStaff_AI_Техническое_задание_v2.1.docx, разделы 7, 12 и 15.
+
+Статус: **этап 1 принят 16.09.2026** в пределах инфраструктурных требований.
+Это не финальная эксплуатационная приёмка всего продукта.
+
+## Результаты приёмки v2.1
+
+| Проверка | Результат |
+|---|---|
+| Java-тесты | 33 passed: 9 Workload, 24 Enterprise |
+| Python-тесты | 16 passed; предупреждение об устаревшем alias AnyIO в Starlette |
+| Сборка и запуск | MySQL, Enterprise, Workload, ML — healthy |
+| Подготовка БД | db-bootstrap и ml-migrations — exit 0 |
+| Пустой том | Инициализация БД и Liquibase успешна, включая отдельный TLS-стенд |
+| Повторный запуск существующего тома | Checksums DATABASECHANGELOG и количества сотрудников/проектов/задач совпали |
+| Внутренние API | Без service token — 401; ML с верным токеном — 200, database=UP |
+| Недоступность ML | Новый вход и dashboard/tasks/kanban/employees/projects/workload/admin — 200; ML восстановлен |
+| HTTPS | Вход и страницы с проверкой CA; preview нагрузки через Java-to-Workload TLS — 200 |
+| ML TLS | Readiness по HTTPS с проверкой CA и service token — 200 |
+| Cookie | JSESSIONID: Secure, HttpOnly, SameSite=Lax в prod |
+| Изоляция | Dev публикует localhost:8080/3307; TLS-стенд — только localhost:8443 |
+| Неверные настройки | Compose отвергает пустые production-секреты; unit-тесты проверяют запрет HTTP service URL и demo-секретов |
+| Сертификаты | Недоверенный CA отклонён; проверка сертификатов не отключалась |
+
+Проверки выполнены на Docker Engine 28.0.4 / Compose 2.34.0.
+Ранее описанный сбой Docker и нехватка диска больше не блокируют запуск.
+Исправлена ошибка повторной установки MySQL-драйвера Liquibase: драйвер устанавливается
+при сборке образа, а не при каждом старте контейнера.
+
+Повторить локальную приёмку: `python tools/verify-stage1.py` после запуска Compose.
+TLS-профиль и ограничения: [DEPLOYMENT.md](DEPLOYMENT.md).
+Логи текущего прогона находятся в игнорируемом `output/flowstaff/acceptance-*.log`.
+HTTP-проверки выполнены от администратора; полная ролевая матрица относится к следующим этапам.
+
 
 ## Инвентаризация базы
 
@@ -27,7 +60,7 @@ mysql-init/02-create-ml-database.sh создаёт только БД и выда
 На новой установке его выполняет MySQL entrypoint, на существующем томе — идемпотентный db-bootstrap.
 Данные существующего тома не удаляются. При смене DB_USERNAME/DB_PASSWORD в .env для старого тома требуется отдельная процедура ротации учётных данных.
 
-attrition-ml-service/db/changelog.xml выполняется отдельным Liquibase job.
+attrition-ml-service/db/changelog.xml выполняется отдельным Liquibase job. Образ собирается из attrition-ml-service/db/Dockerfile с однократной установкой MySQL-драйвера.
 Changeset ml-001-baseline фиксирует начальную версию схемы в DATABASECHANGELOG.
 Предметных ML-таблиц на этапе 1 нет: snapshots, импорт и модели относятся к этапам 7–11.
 Применённые Java changesets не редактируются. Новые изменения добавляются отдельными changesets.

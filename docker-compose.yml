@@ -71,7 +71,7 @@ services:
       retries: 20
       start_period: 40s
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - file_storage:/data/files
     depends_on:
@@ -98,9 +98,10 @@ services:
     restart: "no"
 
   ml-migrations:
-    image: liquibase/liquibase:4.31.1
+    build:
+      context: .
+      dockerfile: attrition-ml-service/db/Dockerfile
     environment:
-      INSTALL_MYSQL: "true"
       LIQUIBASE_COMMAND_URL: jdbc:mysql://mysql:3306/enterprise_ml?allowPublicKeyRetrieval=true&useSSL=false
       LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME:-virtual_app}
       LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
@@ -129,7 +130,7 @@ services:
     volumes:
       - model_storage:/data/models
     healthcheck:
-      test: ["CMD", "python", "-c", "import os,urllib.request; urllib.request.urlopen(urllib.request.Request('http://localhost:8082/internal/v1/health',headers={'X-Service-Token':os.environ['ML_SERVICE_TOKEN']}),timeout=4)"]
+      test: ["CMD", "python", "-m", "app.healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 10

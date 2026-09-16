@@ -1,0 +1,19 @@
+server:
+  ssl:
+    enabled: true
+    certificate: ${TLS_CERTIFICATE}
+    certificate-private-key: ${TLS_PRIVATE_KEY}
+    enabled-protocols: TLSv1.2,TLSv1.3
+spring:
+  datasource:
+    url: ${WORKLOAD_DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+workload:
+  service-token: ${WORKLOAD_SERVICE_TOKEN}
+management:
+  server:
+    address: 127.0.0.1
+    port: 8083
+    ssl:
+      enabled: false
