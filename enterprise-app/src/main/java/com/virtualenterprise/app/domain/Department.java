@@ -26,4 +26,14 @@ public class Department {
     public String getCode() { return code; }
     public String getName() { return name; }
     public boolean isActive() { return active; }
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name="manager_employee_id")
+    private Employee manager;
+    public Employee getManager() { return manager; }
+    public void setManager(Employee value) { this.manager = value; }
+    public Long getVersion() { return version; }
+    public void setEnterprise(Enterprise value) { this.enterprise = value; }
+    public void setParent(Department value) { this.parent = value; }
+    public void setCode(String value) { this.code = value; }
+    public void setName(String value) { this.name = value; }
+    public void setActive(boolean value) { this.active = value; }
 }

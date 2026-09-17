@@ -17,7 +17,7 @@ public class AdminPageController {
     public AdminPageController(AdminViewService service) { this.service=service; }
     @GetMapping("/admin")
     String admin(@RequestParam(defaultValue="employees") String section, Model model) {
-        if(!Set.of("employees","departments","positions","users","schedules","absences","settings").contains(section)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if(!Set.of("employees","departments","positions","users","schedules","absences","settings","roles","calendar").contains(section)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         model.addAllAttributes(service.references(section));
         return "admin/index";
     }

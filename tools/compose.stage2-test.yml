@@ -1,0 +1,18 @@
+# Isolated test stack. Run with -p flowstaff-stage2 and the root Compose file first.
+services:
+  mysql:
+    container_name: flowstaff-stage2-mysql
+    ports: !override
+      - "127.0.0.1:13307:3306"
+  enterprise-app:
+    container_name: flowstaff-stage2-enterprise
+    image: flowstaff-stage2-enterprise-app
+    ports: !override
+      - "127.0.0.1:18080:8080"
+  workload-service:
+    container_name: flowstaff-stage2-workload
+    image: flowstaff-stage2-workload-service
+  attrition-ml-service:
+    image: flowstaff-stage2-attrition-ml-service
+  ml-migrations:
+    image: flowstaff-stage2-ml-migrations

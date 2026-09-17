@@ -28,4 +28,15 @@ public class WorkSchedule {
     public String getCode() { return code; }
     public String getName() { return name; }
     public Set<WorkScheduleDay> getDays() { return days; }
+    @Column(nullable=false) private boolean active = true;
+    public boolean isActive() { return active; }
+    public Long getVersion() { return version; }
+    public String getTimezone() { return timezone; }
+    public void setTimezone(String value) { this.timezone = value; }
+    public java.math.BigDecimal getWeeklyHours() { return weeklyHours; }
+    public void setWeeklyHours(java.math.BigDecimal value) { this.weeklyHours = value; }
+    public void setEnterprise(Enterprise value) { this.enterprise = value; }
+    public void setCode(String value) { this.code = value; }
+    public void setName(String value) { this.name = value; }
+    public void setActive(boolean value) { this.active = value; }
 }

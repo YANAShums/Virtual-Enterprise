@@ -21,13 +21,6 @@ public class DatabaseUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
         AppUser user = repository.findByUsernameIgnoreCaseOrEmailIgnoreCase(login, login)
                 .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
-        return User.withUsername(user.getUsername())
-                .password(user.getPasswordHash())
-                .disabled(!user.isActive())
-                .accountLocked(!"ACTIVE".equals(user.getStatus()))
-                .authorities(user.getRoles().stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getCode()))
-                        .toList())
-                .build();
+        return new SessionPrincipal(user);
     }
 }

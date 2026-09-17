@@ -19,4 +19,13 @@ public class ProductionCalendarDay {
     private BigDecimal workingHoursOverride;
     public Long getId(){return id;} public LocalDate getCalendarDate(){return calendarDate;}
     public String getDayType(){return dayType;} public BigDecimal getWorkingHoursOverride(){return workingHoursOverride;}
+    @Version private Long version;
+    @Column(length=255) private String description;
+    public String getDescription() { return description; }
+    public void setDescription(String value) { this.description = value; }
+    public Long getVersion() { return version; }
+    public void setEnterprise(Enterprise value) { this.enterprise = value; }
+    public void setCalendarDate(LocalDate value) { this.calendarDate = value; }
+    public void setDayType(String value) { this.dayType = value; }
+    public void setWorkingHoursOverride(BigDecimal value) { this.workingHoursOverride = value; }
 }

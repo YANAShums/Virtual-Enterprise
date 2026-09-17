@@ -21,4 +21,9 @@ public class WorkScheduleDay {
     public Integer getDayOfWeek() { return dayOfWeek; }
     public boolean isWorkingDay() { return workingDay; }
     public BigDecimal getPlannedHours() { return plannedHours; }
+
+    public void setSchedule(WorkSchedule value) { this.schedule = value; }
+    public void setDayOfWeek(Integer value) { this.dayOfWeek = value; }
+    public void setWorkingDay(boolean value) { this.workingDay = value; }
+    public void setPlannedHours(BigDecimal value) { this.plannedHours = value; }
 }

@@ -13,7 +13,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @EnableMethodSecurity
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, com.virtualenterprise.app.repository.AppUserRepository users) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/login", "/css/**", "/js/**", "/actuator/health").permitAll()
@@ -26,6 +26,8 @@ public class SecurityConfig {
             .logout(logout -> logout.logoutSuccessUrl("/login?logout"))
             .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        http.addFilterAfter(new com.virtualenterprise.app.security.SessionIntegrityFilter(users),
+                org.springframework.security.web.context.SecurityContextHolderFilter.class);
         return http.build();
     }
 

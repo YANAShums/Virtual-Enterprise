@@ -23,4 +23,14 @@ public class PositionEntity {
     public String getCode() { return code; }
     public String getName() { return name; }
     public String getGrade() { return grade; }
+    @Column(columnDefinition="TEXT") private String description;
+    public String getDescription() { return description; }
+    public void setDescription(String value) { this.description = value; }
+    public boolean isActive() { return active; }
+    public Long getVersion() { return version; }
+    public void setEnterprise(Enterprise value) { this.enterprise = value; }
+    public void setCode(String value) { this.code = value; }
+    public void setName(String value) { this.name = value; }
+    public void setGrade(String value) { this.grade = value; }
+    public void setActive(boolean value) { this.active = value; }
 }

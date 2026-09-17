@@ -21,4 +21,9 @@ public class Enterprise {
     public String getName() { return name; }
     public String getTimezone() { return timezone; }
     public boolean isActive() { return active; }
+
+    public Long getVersion() { return version; }
+    public void setCode(String value) { this.code = value; }
+    public void setName(String value) { this.name = value; }
+    public void setTimezone(String value) { this.timezone = value; }
 }

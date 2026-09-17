@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface PositionRepository extends JpaRepository<PositionEntity, Long> {
     List<PositionEntity> findByActiveTrueOrderByNameAsc();
+    java.util.List<PositionEntity> findAllByOrderByNameAsc();
 }

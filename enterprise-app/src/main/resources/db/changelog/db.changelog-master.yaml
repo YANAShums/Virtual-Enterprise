@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/001-core-schema.sql
   - include:
       file: db/changelog/002-seed-data.sql
+  - include:
+      file: db/changelog/003-organization-admin.sql

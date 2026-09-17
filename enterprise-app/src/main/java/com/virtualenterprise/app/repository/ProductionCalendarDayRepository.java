@@ -5,4 +5,5 @@ import java.time.LocalDate;
 import java.util.List;
 public interface ProductionCalendarDayRepository extends JpaRepository<ProductionCalendarDay, Long> {
     List<ProductionCalendarDay> findByEnterpriseIdAndCalendarDateBetween(Long enterpriseId, LocalDate start, LocalDate end);
+    java.util.List<ProductionCalendarDay> findAllByOrderByCalendarDateDesc();
 }

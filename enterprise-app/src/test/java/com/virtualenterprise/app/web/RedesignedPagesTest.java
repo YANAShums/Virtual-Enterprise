@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("dev")
 class RedesignedPagesTest {
     @Autowired MockMvc mvc;
+    @MockitoBean com.virtualenterprise.app.repository.AppUserRepository appUsers;
     @MockitoBean EmployeeViewService employees;
     @MockitoBean ProjectViewService projects;
     @MockitoBean AdminViewService admin;

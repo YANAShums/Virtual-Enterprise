@@ -1,0 +1,2 @@
+<!DOCTYPE html><html lang="ru" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('Администрирование')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main id="mainContent" tabindex="-1" class="container form-page py-4">
+<h1>Не удалось выполнить действие</h1><div class="alert alert-danger" role="alert" th:text="${formError}"></div><a class="btn btn-primary" th:href="@{/admin}">К администрированию</a></main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>

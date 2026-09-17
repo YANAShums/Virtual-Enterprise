@@ -31,4 +31,14 @@ public class AppUser {
     public String getStatus() { return status; }
     public boolean isActive() { return active; }
     public Set<Role> getRoles() { return roles; }
+    @Column(nullable=false) private long securityRevision;
+    public long getSecurityRevision() { return securityRevision; }
+    public void revokeSessions() { securityRevision++; }
+    public Long getVersion() { return version; }
+    public void setUsername(String value) { this.username = value; }
+    public void setEmail(String value) { this.email = value; }
+    public void setPasswordHash(String value) { this.passwordHash = value; }
+    public void setStatus(String value) { this.status = value; }
+    public void setActive(boolean value) { this.active = value; }
+    public void setRoles(Set<Role> value) { this.roles = value; }
 }

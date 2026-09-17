@@ -22,6 +22,7 @@ public class EmployeeManagementService {
         e.setDepartment(departments.findById(f.getDepartmentId()).orElseThrow());
         e.setPosition(positions.findById(f.getPositionId()).orElseThrow());
         e.setWorkSchedule(schedules.findById(f.getWorkScheduleId()).orElseThrow());
+        com.virtualenterprise.app.service.admin.AdminRules.check(e.getDepartment().isActive() && e.getPosition().isActive() && e.getWorkSchedule().isActive(),"Для нового сотрудника выберите действующие подразделение, должность и график");
         if(f.getManagerId()!=null) e.setManager(employees.findById(f.getManagerId()).orElseThrow());
         e.setPersonnelNumber(f.getPersonnelNumber().trim()); e.setLastName(f.getLastName().trim()); e.setFirstName(f.getFirstName().trim());
         e.setMiddleName(blankToNull(f.getMiddleName())); e.setEmail(blankToNull(f.getEmail())); e.setHireDate(f.getHireDate());

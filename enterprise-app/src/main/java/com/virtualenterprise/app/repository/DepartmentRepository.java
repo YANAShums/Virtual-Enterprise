@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
     List<Department> findByActiveTrueOrderByNameAsc();
+    java.util.List<Department> findAllByOrderByNameAsc();
+    boolean existsByParentId(Long id);
 }

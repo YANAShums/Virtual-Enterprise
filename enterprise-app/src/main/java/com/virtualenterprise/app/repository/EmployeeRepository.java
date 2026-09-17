@@ -18,4 +18,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     @Override
     @EntityGraph(attributePaths = {"department", "position", "workSchedule", "workSchedule.days", "enterprise"})
     Optional<Employee> findById(Long id);
+    boolean existsByDepartmentId(Long id);
+    boolean existsByPositionId(Long id);
+    boolean existsByWorkScheduleId(Long id);
 }

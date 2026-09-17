@@ -6,4 +6,5 @@ import java.util.List;
 public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Long> {
     @EntityGraph(attributePaths = "days")
     List<WorkSchedule> findAllByOrderByNameAsc();
+    java.util.List<WorkSchedule> findByActiveTrueOrderByNameAsc();
 }

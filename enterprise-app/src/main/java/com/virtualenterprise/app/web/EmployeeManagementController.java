@@ -28,5 +28,5 @@ public class EmployeeManagementController {
         if(binding.hasErrors()){references(model);return "employees/form";}
         try{service.create(employeeForm);return "redirect:/employees?created";}catch(AppException ex){model.addAttribute("formError",ex.getMessage());references(model);return "employees/form";}
     }
-    private void references(Model model){model.addAttribute("departments",departments.findByActiveTrueOrderByNameAsc());model.addAttribute("positions",positions.findByActiveTrueOrderByNameAsc());model.addAttribute("schedules",schedules.findAllByOrderByNameAsc());model.addAttribute("managers",employees.findByActiveTrueOrderByLastNameAscFirstNameAsc());}
+    private void references(Model model){model.addAttribute("departments",departments.findByActiveTrueOrderByNameAsc());model.addAttribute("positions",positions.findByActiveTrueOrderByNameAsc());model.addAttribute("schedules",schedules.findByActiveTrueOrderByNameAsc());model.addAttribute("managers",employees.findByActiveTrueOrderByLastNameAscFirstNameAsc());}
 }
