@@ -45,7 +45,8 @@
         }
         if(select)select.disabled=true;
         try {
-            const response=await apiFetch('/api/v1/tasks/'+record.dataset.taskId+'/status',{method:'PATCH',body:JSON.stringify({targetStatusCode:target,version:Number(record.dataset.version),comment,kanbanOrder:Date.now()})});
+            // DECIMAL(20,10) allows 10 integer digits; epoch seconds fit, milliseconds do not.
+            const response=await apiFetch('/api/v1/tasks/'+record.dataset.taskId+'/status',{method:'PATCH',body:JSON.stringify({targetStatusCode:target,version:Number(record.dataset.version),comment,kanbanOrder:Math.floor(Date.now() / 1000)})});
             record.dataset.status=target; record.dataset.version=response.version;
             document.querySelectorAll('.kanban-dropzone').forEach(zone=>{if(zone.dataset.status===target)zone.prepend(record);});
             if(select)select.value=target;

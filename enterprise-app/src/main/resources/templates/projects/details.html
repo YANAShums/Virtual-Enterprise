@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="ru" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('Обзор проекта')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main id="mainContent" class="container-fluid">
- <a class="eyebrow d-inline-block mb-3" th:href="@{/projects}">Проекты <i class="bi bi-chevron-right mx-1" aria-hidden="true"></i><span th:text="${project.code}"></span></a>
- <div class="page-heading"><div class="heading-title"><span class="project-mark"><i class="bi bi-folder2" aria-hidden="true"></i></span><h1 th:text="${project.name}"></h1><span th:replace="~{fragments/ui :: projectStatus(${project.status})}"></span></div></div>
+ <a class="eyebrow d-inline-block mb-3" th:href="@{/projects}">Проекты <i data-lucide="chevron-right" class="mx-1" aria-hidden="true"></i><span th:text="${project.code}"></span></a>
+ <div class="page-heading"><div class="heading-title"><span class="project-mark"><i data-lucide="folder" class="" aria-hidden="true"></i></span><h1 th:text="${project.name}"></h1><span th:replace="~{fragments/ui :: projectStatus(${project.status})}"></span></div></div>
  <nav class="view-tabs" aria-label="Разделы проекта"><a class="active" th:href="@{/projects/{id}(id=${project.id})}" aria-current="page">О проекте</a><a th:href="@{/tasks(projectId=${project.id})}">Задачи <span class="text-secondary ms-1" th:text="${#lists.size(tasks)}"></span></a><a th:href="@{/kanban(projectId=${project.id})}">Доска</a></nav>
  <div class="detail-layout"><div class="detail-content">
   <section class="detail-section"><h2>Описание</h2><p class="description-text" th:text="${!#strings.isEmpty(project.description) ? project.description : 'Описание пока не добавлено.'}"></p></section>

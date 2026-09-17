@@ -2,7 +2,7 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="empty(title, description)" class="empty-state">
-    <i class="bi bi-inbox" aria-hidden="true"></i>
+    <i data-lucide="inbox" class="" aria-hidden="true"></i>
     <h3 th:text="${title}"></h3>
     <p th:text="${description}"></p>
 </div>
@@ -64,7 +64,7 @@
 </span>
 
 <div th:fragment="flash" th:if="${param.created}" class="alert alert-success" role="status">
-    <i class="bi bi-check-circle me-2" aria-hidden="true"></i>Данные успешно сохранены.
+    <i data-lucide="circle-check" class="me-2" aria-hidden="true"></i>Данные успешно сохранены.
 </div>
 
 <div th:fragment="legend" class="workload-legend" aria-label="Обозначения загрузки">
