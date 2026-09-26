@@ -13,11 +13,18 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     @EntityGraph(attributePaths = {"department", "position", "workSchedule", "workSchedule.days"})
     List<Employee> findByDepartmentIdAndActiveTrueOrderByLastNameAscFirstNameAsc(Long departmentId);
 
+    @EntityGraph(attributePaths = {"department", "position", "workSchedule", "workSchedule.days"})
+    List<Employee> findAllByOrderByLastNameAscFirstNameAsc();
+
+    @EntityGraph(attributePaths = {"department", "position", "workSchedule", "workSchedule.days"})
+    List<Employee> findByDepartmentIdOrderByLastNameAscFirstNameAsc(Long departmentId);
+
     Optional<Employee> findByUserId(Long userId);
 
     @Override
-    @EntityGraph(attributePaths = {"department", "position", "workSchedule", "workSchedule.days", "enterprise"})
+    @EntityGraph(attributePaths = {"department", "position", "manager", "workSchedule", "workSchedule.days", "enterprise"})
     Optional<Employee> findById(Long id);
+
     boolean existsByDepartmentId(Long id);
     boolean existsByPositionId(Long id);
     boolean existsByWorkScheduleId(Long id);

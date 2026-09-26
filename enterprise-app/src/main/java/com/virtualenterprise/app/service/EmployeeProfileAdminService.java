@@ -1,0 +1,116 @@
+package com.virtualenterprise.app.service;
+
+import com.virtualenterprise.app.domain.*;
+import com.virtualenterprise.app.repository.*;
+import com.virtualenterprise.app.service.admin.AdminRules;
+import com.virtualenterprise.app.web.dto.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.*;
+import java.util.Objects;
+
+@Service
+@Transactional
+@PreAuthorize("hasRole('ADMIN')")
+public class EmployeeProfileAdminService {
+    private final EmployeeRepository employees;
+    private final EmployeeAbsenceRepository absences;
+    private final EnterpriseRepository enterprises;
+    private final SkillRepository skills;
+    private final EmployeeSkillRepository employeeSkills;
+
+    public EmployeeProfileAdminService(EmployeeRepository employees,EmployeeAbsenceRepository absences,
+                                       EnterpriseRepository enterprises,SkillRepository skills,
+                                       EmployeeSkillRepository employeeSkills) {
+        this.employees=employees;this.absences=absences;this.enterprises=enterprises;
+        this.skills=skills;this.employeeSkills=employeeSkills;
+    }
+
+    @Transactional(readOnly=true)
+    public EmployeeAbsenceForm absenceForm(Long employeeId,Long absenceId) {
+        requireEmployee(employeeId);
+        EmployeeAbsenceForm form=new EmployeeAbsenceForm();
+        if(absenceId==null) {
+            form.setStartAt(LocalDate.now().plusDays(1).atStartOfDay());
+            form.setEndAt(LocalDate.now().plusDays(1).atTime(23,59));
+            return form;
+        }
+        EmployeeAbsence item=requireAbsence(employeeId,absenceId);
+        form.setVersion(item.getVersion());form.setAbsenceType(item.getAbsenceType());form.setStatus(item.getStatus());
+        form.setStartAt(item.getStartAt());form.setEndAt(item.getEndAt());form.setAllDay(item.isAllDay());form.setReason(item.getReason());
+        return form;
+    }
+
+    public Long saveAbsence(Long employeeId,Long absenceId,EmployeeAbsenceForm form) {
+        Employee employee=requireEmployee(employeeId);
+        EmployeeAbsence item=absenceId==null?new EmployeeAbsence():requireAbsence(employeeId,absenceId);
+        if(absenceId!=null) AdminRules.version(item.getVersion(),form.getVersion());
+        AdminRules.check(form.getEndAt().isAfter(form.getStartAt()),"Окончание отсутствия должно быть позже начала");
+        if("APPROVED".equals(form.getStatus())) {
+            AdminRules.check(absences.countApprovedConflicts(employeeId,absenceId,form.getStartAt(),form.getEndAt())==0,
+                    "Подтверждённое отсутствие пересекается с другим периодом");
+        }
+        item.setEmployee(employee);item.setAbsenceType(form.getAbsenceType());item.setStatus(form.getStatus());
+        item.setStartAt(form.getStartAt());item.setEndAt(form.getEndAt());item.setAllDay(form.isAllDay());
+        item.setReason(blankToNull(form.getReason()));
+        return absences.saveAndFlush(item).getId();
+    }
+
+    public void cancelAbsence(Long employeeId,Long absenceId,Long version) {
+        EmployeeAbsence item=requireAbsence(employeeId,absenceId);
+        AdminRules.version(item.getVersion(),version);item.setStatus("CANCELLED");absences.saveAndFlush(item);
+    }
+
+    @Transactional(readOnly=true)
+    public EmployeeSkillForm skillForm(Long employeeId,Long employeeSkillId) {
+        requireEmployee(employeeId);
+        EmployeeSkillForm form=new EmployeeSkillForm();
+        if(employeeSkillId!=null) {
+            EmployeeSkill item=requireSkill(employeeId,employeeSkillId);
+            form.setVersion(item.getVersion());form.setSkillName(item.getSkill().getName());
+            form.setProficiencyLevel(item.getProficiencyLevel());form.setYearsExperience(item.getYearsExperience());
+            form.setLastUsedDate(item.getLastUsedDate());
+        }
+        return form;
+    }
+
+    public Long saveSkill(Long employeeId,Long employeeSkillId,EmployeeSkillForm form) {
+        Employee employee=requireEmployee(employeeId);
+        Enterprise enterprise=enterprises.lockOrganization().orElseThrow(AdminRules::missing);
+        String name=form.getSkillName().trim();
+        Skill skill=skills.findByEnterpriseIdAndNameIgnoreCase(enterprise.getId(),name).orElseGet(() -> {
+            Skill created=new Skill();created.setEnterprise(enterprise);created.setName(name);created.setActive(true);
+            return skills.saveAndFlush(created);
+        });
+        EmployeeSkill item=employeeSkillId==null?new EmployeeSkill():requireSkill(employeeId,employeeSkillId);
+        if(employeeSkillId!=null) AdminRules.version(item.getVersion(),form.getVersion());
+        employeeSkills.findByEmployeeIdAndSkillId(employeeId,skill.getId()).ifPresent(existing ->
+                AdminRules.check(employeeSkillId!=null && Objects.equals(existing.getId(),employeeSkillId),
+                        "Этот навык уже добавлен сотруднику"));
+        AdminRules.check(form.getLastUsedDate()==null || !form.getLastUsedDate().isAfter(LocalDate.now()),
+                "Дата последнего использования навыка не может быть в будущем");
+        item.setEmployee(employee);item.setSkill(skill);item.setProficiencyLevel(form.getProficiencyLevel());
+        item.setYearsExperience(form.getYearsExperience());item.setLastUsedDate(form.getLastUsedDate());item.setActive(true);
+        return employeeSkills.saveAndFlush(item).getId();
+    }
+
+    public void archiveSkill(Long employeeId,Long employeeSkillId,Long version) {
+        EmployeeSkill item=requireSkill(employeeId,employeeSkillId);AdminRules.version(item.getVersion(),version);
+        item.setActive(false);employeeSkills.saveAndFlush(item);
+    }
+
+    private Employee requireEmployee(Long id){return employees.findById(id).orElseThrow(AdminRules::missing);}
+    private EmployeeAbsence requireAbsence(Long employeeId,Long id) {
+        EmployeeAbsence item=absences.findById(id).orElseThrow(AdminRules::missing);
+        AdminRules.check(Objects.equals(item.getEmployee().getId(),employeeId),"Отсутствие относится к другому сотруднику");
+        return item;
+    }
+    private EmployeeSkill requireSkill(Long employeeId,Long id) {
+        EmployeeSkill item=employeeSkills.findById(id).orElseThrow(AdminRules::missing);
+        AdminRules.check(Objects.equals(item.getEmployee().getId(),employeeId),"Навык относится к другому сотруднику");
+        return item;
+    }
+    private String blankToNull(String value){return value==null||value.isBlank()?null:value.trim();}
+}

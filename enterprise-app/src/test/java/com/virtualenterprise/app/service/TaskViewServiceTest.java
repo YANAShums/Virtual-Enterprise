@@ -11,7 +11,9 @@ class TaskViewServiceTest {
     private final TaskRepository tasks=mock(TaskRepository.class);
     private final ProjectRepository projects=mock(ProjectRepository.class);
     private final TaskStatusRepository statuses=mock(TaskStatusRepository.class);
-    private final TaskViewService service=new TaskViewService(tasks,projects,statuses);
+    private final TaskCommentRepository comments=mock(TaskCommentRepository.class);
+    private final TaskChecklistItemRepository checklist=mock(TaskChecklistItemRepository.class);
+    private final TaskViewService service=new TaskViewService(tasks,projects,statuses,comments,checklist);
 
     private Task task(String title, String statusCode, String username, boolean overdue) {
         Task task=new Task(); task.setTitle(title); task.setTaskNumber("TEST-1"); task.setOverdue(overdue);

@@ -19,6 +19,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @EntityGraph(attributePaths = {"project", "status"})
     List<Task> findByAssigneeIdAndStatusCodeIn(Long employeeId, Collection<String> statusCodes);
 
+
+    @Override
+    @EntityGraph(attributePaths = {"project", "assignee", "assignee.user", "assignee.department", "status", "priority", "creator"})
+    java.util.Optional<Task> findById(Long id);
     long countByAssigneeIdAndStatusCodeIn(Long employeeId, Collection<String> statusCodes);
     long countByProjectId(Long projectId);
     long countByOverdueTrue();

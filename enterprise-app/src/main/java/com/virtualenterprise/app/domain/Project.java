@@ -49,6 +49,7 @@ public class Project {
     public BigDecimal getProgressPercent() { return progressPercent; }
     public String getRiskLevel() { return riskLevel; }
     public boolean isActive() { return active; }
+    public Long getVersion() { return version; }
     public void setEnterprise(Enterprise enterprise) { this.enterprise = enterprise; }
     public void setManager(Employee manager) { this.manager = manager; }
     public void setCode(String code) { this.code = code; }

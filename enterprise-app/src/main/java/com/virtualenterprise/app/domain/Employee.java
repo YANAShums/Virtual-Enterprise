@@ -38,9 +38,13 @@ public class Employee {
     private String timezone;
     @Column(nullable = false, length = 30)
     private String status;
+    private LocalDate terminationDate;
+    @Column(length = 500)
+    private String terminationReason;
     @Column(nullable = false)
     private boolean active = true;
     @Version private Long version;
+
     public Long getId() { return id; }
     public Enterprise getEnterprise() { return enterprise; }
     public AppUser getUser() { return user; }
@@ -57,8 +61,12 @@ public class Employee {
     public BigDecimal getEmploymentRate() { return employmentRate; }
     public String getTimezone() { return timezone; }
     public String getStatus() { return status; }
+    public LocalDate getTerminationDate() { return terminationDate; }
+    public String getTerminationReason() { return terminationReason; }
     public boolean isActive() { return active; }
-    public String getFullName() { return lastName + " " + firstName + (middleName == null ? "" : " " + middleName); }
+    public Long getVersion() { return version; }
+    public String getFullName() { return lastName + " " + firstName + (middleName == null || middleName.isBlank() ? "" : " " + middleName); }
+
     public void setEnterprise(Enterprise enterprise) { this.enterprise = enterprise; }
     public void setUser(AppUser user) { this.user = user; }
     public void setDepartment(Department department) { this.department = department; }
@@ -74,5 +82,7 @@ public class Employee {
     public void setEmploymentRate(BigDecimal employmentRate) { this.employmentRate = employmentRate; }
     public void setTimezone(String timezone) { this.timezone = timezone; }
     public void setStatus(String status) { this.status = status; }
+    public void setTerminationDate(LocalDate terminationDate) { this.terminationDate = terminationDate; }
+    public void setTerminationReason(String terminationReason) { this.terminationReason = terminationReason; }
     public void setActive(boolean active) { this.active = active; }
 }

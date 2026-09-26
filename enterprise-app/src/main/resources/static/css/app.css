@@ -5,5 +5,6 @@
 @import url('./pages/dashboard.css');
 @import url('./pages/employees.css');
 @import url('./pages/kanban.css');
+@import url('./pages/tasks.css');
 @import url('./pages/workload.css');
 @import url('./pages/admin.css');

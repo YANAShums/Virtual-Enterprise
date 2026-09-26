@@ -7,6 +7,7 @@ import com.virtualenterprise.app.repository.*;
 import com.virtualenterprise.app.security.CurrentUserService;
 import com.virtualenterprise.app.web.dto.CreateTaskRequest;
 import com.virtualenterprise.app.web.dto.TaskStatusChangeRequest;
+import com.virtualenterprise.app.web.dto.TaskEditForm;
 import com.virtualenterprise.contracts.workload.CandidateWorkloadResult;
 import com.virtualenterprise.contracts.workload.WorkloadEvaluationResponse;
 import com.virtualenterprise.contracts.workload.WorkloadStatus;
@@ -116,6 +117,57 @@ public class TaskService {
         return saved;
     }
 
+
+    @Transactional(readOnly = true)
+    public TaskEditForm form(Long taskId) {
+        Task task=taskRepository.findById(taskId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
+        TaskEditForm form=new TaskEditForm();
+        form.setVersion(task.getVersion());form.setProjectId(task.getProject().getId());form.setTitle(task.getTitle());
+        form.setDescription(task.getDescription());form.setAssigneeEmployeeId(task.getAssignee()==null?null:task.getAssignee().getId());
+        form.setPriorityCode(task.getPriority().getCode());form.setPlannedStartDate(task.getPlannedStartDate());
+        form.setPlannedEndDate(task.getPlannedEndDate());form.setPlannedHours(task.getPlannedHours());
+        return form;
+    }
+
+    @Transactional
+    public Task update(Long taskId,TaskEditForm form) {
+        Task task=taskRepository.findById(taskId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
+        if(!Objects.equals(task.getVersion(),form.getVersion()))
+            throw new AppException(HttpStatus.CONFLICT,"OPTIMISTIC_LOCK","Задача уже изменена другим пользователем");
+        if(form.getPlannedStartDate()!=null && form.getPlannedEndDate().isBefore(form.getPlannedStartDate()))
+            throw new AppException(HttpStatus.BAD_REQUEST,"VALIDATION_ERROR","Дата завершения раньше даты начала");
+        Employee assignee=employeeRepository.findById(form.getAssigneeEmployeeId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Сотрудник не найден"));
+        boolean member=memberRepository.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(task.getProject().getId()).stream()
+                .anyMatch(item -> Objects.equals(item.getEmployee().getId(),assignee.getId()));
+        if(!member) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_NOT_IN_PROJECT","Сотрудник не входит в команду проекта");
+        TaskPriority priority=priorityRepository.findByCode(form.getPriorityCode())
+                .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST,"VALIDATION_ERROR","Неизвестный приоритет"));
+        Map<String,Object> before=taskSnapshot(task);
+        task.setTitle(form.getTitle().trim());task.setDescription(form.getDescription()==null||form.getDescription().isBlank()?null:form.getDescription().trim());
+        task.setAssignee(assignee);task.setAssigneeDepartment(assignee.getDepartment());task.setPriority(priority);
+        task.setPlannedStartDate(form.getPlannedStartDate());task.setPlannedEndDate(form.getPlannedEndDate());
+        task.setPlannedHours(form.getPlannedHours());task.setOverdue(form.getPlannedEndDate().isBefore(java.time.LocalDate.now())
+                && !"DONE".equals(task.getStatus().getCode()) && !"CANCELLED".equals(task.getStatus().getCode()));
+        try {
+            Task saved=taskRepository.saveAndFlush(task);
+            AppUser user=currentUserService.requireCurrentUser();
+            writeEvent("TASK",saved.getId(),"TASK_UPDATED",Map.of("taskId",saved.getId(),"status",saved.getStatus().getCode()));
+            writeAudit(user.getId(),"TASK_UPDATED","TASK",saved.getId(),before,taskSnapshot(saved));
+            return saved;
+        } catch(OptimisticLockingFailureException ex) {
+            throw new AppException(HttpStatus.CONFLICT,"OPTIMISTIC_LOCK","Задача уже изменена другим пользователем");
+        }
+    }
+
+    private Map<String,Object> taskSnapshot(Task task) {
+        Map<String,Object> values=new LinkedHashMap<>();
+        values.put("title",task.getTitle());values.put("assigneeId",task.getAssignee()==null?null:task.getAssignee().getId());
+        values.put("priority",task.getPriority().getCode());values.put("plannedEndDate",task.getPlannedEndDate());
+        values.put("plannedHours",task.getPlannedHours());return values;
+    }
     @Transactional
     public Task changeStatus(Long taskId, TaskStatusChangeRequest request) {
         Task task = taskRepository.findById(taskId)

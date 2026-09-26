@@ -3,6 +3,7 @@ package com.virtualenterprise.app.web;
 import com.virtualenterprise.app.service.EmployeeViewService;
 import com.virtualenterprise.app.service.ProjectViewService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,14 +14,19 @@ import org.springframework.web.server.ResponseStatusException;
 public class DetailPageController {
     private final EmployeeViewService employees;
     private final ProjectViewService projects;
-    public DetailPageController(EmployeeViewService employees, ProjectViewService projects) { this.employees=employees; this.projects=projects; }
+    public DetailPageController(EmployeeViewService employees,ProjectViewService projects) { this.employees=employees;this.projects=projects; }
+
     @GetMapping("/employees/{id:[0-9]+}")
-    String employee(@PathVariable Long id, Model model) {
-        model.addAllAttributes(employees.detail(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
+    String employee(@PathVariable Long id,Authentication authentication,Model model) {
+        boolean admin=authentication!=null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        model.addAllAttributes((admin?employees.detail(id,true):employees.detail(id))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
         return "employees/details";
     }
+
     @GetMapping("/projects/{id:[0-9]+}")
-    String project(@PathVariable Long id, Model model) {
+    String project(@PathVariable Long id,Model model) {
         model.addAllAttributes(projects.detail(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
         return "projects/details";
     }

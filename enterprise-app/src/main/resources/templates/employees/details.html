@@ -1,13 +1,121 @@
-<!DOCTYPE html><html lang="ru" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('Карточка сотрудника')}"></head><body><div th:replace="~{fragments/layout :: navbar}"></div><main id="mainContent" class="container-fluid">
-<a class="eyebrow d-inline-block mb-3" th:href="@{/employees}">Сотрудники <i data-lucide="chevron-right" class="mx-1" aria-hidden="true"></i><span th:text="${employee.personnelNumber}"></span></a>
-<div class="page-heading"><div class="heading-title"><span class="avatar avatar-lg" th:text="${#strings.substring(employee.firstName,0,1)+#strings.substring(employee.lastName,0,1)}"></span><div><h1 th:text="${employee.fullName}"></h1><p class="page-subtitle" th:text="${employee.position.name+' · '+employee.department.name}"></p></div></div><span th:replace="~{fragments/ui :: employeeStatus(${employee.status})}"></span></div>
-<div class="view-tabs" data-tabs role="tablist" aria-label="Разделы сотрудника"><button id="profileTab" class="active" role="tab" data-tab-target="profileOverview" aria-controls="profileOverview" aria-selected="true">Обзор</button><button id="tasksTab" role="tab" data-tab-target="employeeTasks" aria-controls="employeeTasks" aria-selected="false">Задачи</button><button id="scheduleTab" role="tab" data-tab-target="employeeSchedule" aria-controls="employeeSchedule" aria-selected="false">График</button><button id="absenceTab" role="tab" data-tab-target="employeeAbsences" aria-controls="employeeAbsences" aria-selected="false">Отсутствия</button></div>
-<div class="profile-panels">
-<div id="profileOverview" role="tabpanel" aria-labelledby="profileTab" data-tab-panel class="detail-layout">
-<div class="detail-content"><section class="detail-section"><h2>Контактные данные</h2><dl class="detail-list"><dt>Email</dt><dd><a th:if="${employee.email != null}" th:href="${'mailto:'+employee.email}" th:text="${employee.email}"></a><span th:if="${employee.email == null}">Не указан</span></dd><dt>Подразделение</dt><dd th:text="${employee.department.name}"></dd><dt>Должность</dt><dd th:text="${employee.position.name}"></dd><dt>Руководитель</dt><dd th:text="${employee.manager != null ? employee.manager.fullName : 'Не назначен'}"></dd></dl></section>
-<section class="detail-section"><h2>Условия работы</h2><dl class="detail-list"><dt>Дата приёма</dt><dd th:text="${#temporals.format(employee.hireDate,'dd.MM.yyyy')}"></dd><dt>График</dt><dd th:text="${employee.workSchedule.name}"></dd><dt>Ставка</dt><dd th:text="${employee.employmentRate*100+'%'}"></dd><dt>Часовой пояс</dt><dd th:text="${employee.timezone}"></dd></dl></section></div>
-<aside class="property-panel"><h2>Загрузка на 7 дней</h2><div th:if="${workloadError}" class="alert alert-warning" th:text="${workloadError}"></div><div th:each="load:${loads}"><div class="workload-summary" th:text="${load.projectedLoadPercent+'%'}"></div><span th:replace="~{fragments/ui :: workloadStatus(${load.status})}"></span><p class="section-note mt-3">С учётом графика и текущих назначений.</p></div><a class="btn btn-outline-secondary w-100 mt-4" th:href="@{/workload(departmentId=${employee.department.id})}">Открыть загрузку</a></aside></div>
-<section id="employeeTasks" role="tabpanel" aria-labelledby="tasksTab" data-tab-panel hidden><div th:replace="~{fragments/tasks :: table(${tasks})}"></div></section>
-<section id="employeeSchedule" role="tabpanel" aria-labelledby="scheduleTab" data-tab-panel hidden><h2 class="mb-4" th:text="${employee.workSchedule.name}"></h2><div class="d-flex flex-wrap gap-2"><div class="day-cell" th:each="day:${employee.workSchedule.days}" th:classappend="${day.workingDay ? 'workload-bg-normal' : 'workload-bg-unavailable'}"><span th:text="${{'Пн','Вт','Ср','Чт','Пт','Сб','Вс'}[day.dayOfWeek - 1]}"></span><strong th:text="${day.plannedHours+' ч'}"></strong><span th:text="${day.workingDay ? 'Рабочий' : 'Выходной'}"></span></div></div></section>
-<section id="employeeAbsences" role="tabpanel" aria-labelledby="absenceTab" data-tab-panel hidden><h2 class="mb-4">Отсутствия на ближайшие 3 месяца</h2><p th:if="${#lists.isEmpty(absences)}" class="text-secondary">Подтверждённых отсутствий за этот период нет.</p><div class="member-row" th:each="absence:${absences}"><i data-lucide="calendar-days" class="text-secondary" aria-hidden="true"></i><span th:text="${#temporals.format(absence.startAt,'dd.MM.yyyy')}"></span> — <span th:text="${#temporals.format(absence.endAt,'dd.MM.yyyy')}"></span><span th:replace="~{fragments/ui :: state(${absence.status})}"></span></div></section>
-</div></main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Карточка сотрудника')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main id="mainContent" class="container-fluid">
+    <a class="eyebrow d-inline-flex align-items-center mb-3" th:href="@{/employees}">
+        Сотрудники <i data-lucide="chevron-right" class="mx-1" aria-hidden="true"></i>
+        <span th:text="${employee.personnelNumber}"></span>
+    </a>
+    <div th:if="${param.created}" class="alert alert-success" role="status">Сотрудник создан, начальные записи добавлены в кадровую историю.</div>
+    <div th:if="${param.updated}" class="alert alert-success" role="status">Данные сотрудника и кадровая история обновлены.</div>
+
+    <div class="page-heading">
+        <div class="heading-title">
+            <span class="avatar avatar-lg" th:text="${#strings.substring(employee.firstName,0,1)+#strings.substring(employee.lastName,0,1)}"></span>
+            <div><h1 th:text="${employee.fullName}"></h1><p class="page-subtitle" th:text="${employee.position.name+' · '+employee.department.name}"></p></div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span th:replace="~{fragments/ui :: employeeStatus(${employee.status})}"></span>
+            <a sec:authorize="hasRole('ADMIN')" class="btn btn-outline-secondary" th:href="@{/employees/{id}/edit(id=${employee.id})}"><i data-lucide="pencil" class="me-2" aria-hidden="true"></i>Редактировать</a>
+        </div>
+    </div>
+
+    <div class="view-tabs" data-tabs role="tablist" aria-label="Разделы сотрудника">
+        <button id="profileTab" class="active" role="tab" data-tab-target="profileOverview" aria-controls="profileOverview" aria-selected="true">Обзор</button>
+        <button id="tasksTab" role="tab" data-tab-target="employeeTasks" aria-controls="employeeTasks" aria-selected="false">Задачи</button>
+        <button id="scheduleTab" role="tab" data-tab-target="employeeSchedule" aria-controls="employeeSchedule" aria-selected="false">График</button>
+        <button id="absenceTab" role="tab" data-tab-target="employeeAbsences" aria-controls="employeeAbsences" aria-selected="false">Отсутствия</button><button id="skillsTab" role="tab" data-tab-target="employeeSkills" aria-controls="employeeSkills" aria-selected="false">Навыки</button>
+        <button id="historyTab" role="tab" data-tab-target="employeeHistory" aria-controls="employeeHistory" aria-selected="false">Кадровая история</button>
+    </div>
+
+    <div class="profile-panels">
+        <div id="profileOverview" role="tabpanel" aria-labelledby="profileTab" data-tab-panel class="detail-layout">
+            <div class="detail-content">
+                <section class="detail-section"><h2>Контактные данные</h2><dl class="detail-list">
+                    <dt>Email</dt><dd><a th:if="${employee.email != null}" th:href="${'mailto:'+employee.email}" th:text="${employee.email}"></a><span th:if="${employee.email == null}">Не указан</span></dd>
+                    <dt>Подразделение</dt><dd th:text="${employee.department.name}"></dd>
+                    <dt>Должность</dt><dd th:text="${employee.position.name}"></dd>
+                    <dt>Руководитель</dt><dd th:text="${employee.manager != null ? employee.manager.fullName : 'Не назначен'}"></dd>
+                </dl></section>
+                <section class="detail-section"><h2>Условия работы</h2><dl class="detail-list">
+                    <dt>Дата приёма</dt><dd th:text="${#temporals.format(employee.hireDate,'dd.MM.yyyy')}"></dd>
+                    <dt>Статус</dt><dd><span th:replace="~{fragments/ui :: employeeStatus(${employee.status})}"></span></dd>
+                    <dt>График</dt><dd th:text="${employee.workSchedule.name}"></dd>
+                    <dt>Ставка</dt><dd th:text="${employee.employmentRate*100+'%'}"></dd>
+                    <dt>Часовой пояс</dt><dd th:text="${employee.timezone}"></dd>
+                    <th:block th:if="${employee.terminationDate != null}">
+                        <dt>Дата увольнения</dt><dd th:text="${#temporals.format(employee.terminationDate,'dd.MM.yyyy')}"></dd>
+                        <dt>Причина увольнения</dt><dd th:text="${employee.terminationReason}"></dd>
+                    </th:block>
+                </dl></section>
+            </div>
+            <aside class="property-panel">
+                <th:block th:if="${employee.active}">
+                    <h2>Загрузка на 7 дней</h2>
+                    <div th:if="${workloadError}" class="alert alert-warning" th:text="${workloadError}"></div>
+                    <div th:each="load:${loads}"><div class="workload-summary" th:text="${load.projectedLoadPercent+'%'}"></div><span th:replace="~{fragments/ui :: workloadStatus(${load.status})}"></span><p class="section-note mt-3">С учётом графика и текущих назначений.</p></div>
+                    <a class="btn btn-outline-secondary w-100 mt-4" th:href="@{/workload(departmentId=${employee.department.id})}">Открыть загрузку</a>
+                </th:block>
+                <th:block th:unless="${employee.active}">
+                    <span class="form-section-icon mb-3"><i data-lucide="archive" aria-hidden="true"></i></span>
+                    <h2>Карточка в архиве</h2>
+                    <p class="section-note">Загрузка не рассчитывается для неактивного или уволенного сотрудника.</p>
+                </th:block>
+            </aside>
+        </div>
+
+        <section id="employeeTasks" role="tabpanel" aria-labelledby="tasksTab" data-tab-panel hidden><div th:replace="~{fragments/tasks :: table(${tasks})}"></div></section>
+        <section id="employeeSchedule" role="tabpanel" aria-labelledby="scheduleTab" data-tab-panel hidden>
+            <h2 class="mb-4" th:text="${employee.workSchedule.name}"></h2>
+            <div class="d-flex flex-wrap gap-2"><div class="day-cell" th:each="day:${employee.workSchedule.days}" th:classappend="${day.workingDay ? 'workload-bg-normal' : 'workload-bg-unavailable'}"><span th:text="${{'Пн','Вт','Ср','Чт','Пт','Сб','Вс'}[day.dayOfWeek - 1]}"></span><strong th:text="${day.plannedHours+' ч'}"></strong><span th:text="${day.workingDay ? 'Рабочий' : 'Выходной'}"></span></div></div>
+        </section>        <section id="employeeAbsences" role="tabpanel" aria-labelledby="absenceTab" data-tab-panel hidden>
+            <div class="widget-heading"><div><p class="eyebrow">КАДРОВЫЕ ПЕРИОДЫ</p><h2>Отсутствия</h2></div><a sec:authorize="hasRole('ADMIN')" class="btn btn-sm btn-primary" th:href="@{/employees/{id}/absences/new(id=${employee.id})}"><i data-lucide="plus" class="me-1" aria-hidden="true"></i>Добавить</a></div>
+            <p th:if="${absenceHistory == null or #lists.isEmpty(absenceHistory)}" class="text-secondary">Отсутствия сотрудника ещё не зарегистрированы.</p>
+            <div class="record-list" th:if="${absenceHistory != null}">
+                <article class="record-card" th:each="absence:${absenceHistory}">
+                    <span class="form-section-icon"><i data-lucide="calendar-off" aria-hidden="true"></i></span>
+                    <div class="record-body"><div class="record-heading"><strong th:switch="${absence.absenceType}"><span th:case="'VACATION'">Отпуск</span><span th:case="'SICK_LEAVE'">Больничный</span><span th:case="'BUSINESS_TRIP'">Командировка</span><span th:case="'UNPAID_LEAVE'">Отпуск без оплаты</span><span th:case="*">Другое</span></strong><span th:replace="~{fragments/ui :: state(${absence.status})}"></span></div>
+                    <div class="history-meta"><span th:text="${#temporals.format(absence.startAt,'dd.MM.yyyy HH:mm')}"></span><span>—</span><span th:text="${#temporals.format(absence.endAt,'dd.MM.yyyy HH:mm')}"></span></div><p th:if="${absence.reason != null}" th:text="${absence.reason}"></p></div>
+                    <div sec:authorize="hasRole('ADMIN')" class="record-actions"><a class="btn btn-ghost btn-icon" th:href="@{/employees/{employeeId}/absences/{id}/edit(employeeId=${employee.id},id=${absence.id})}" aria-label="Редактировать отсутствие"><i data-lucide="pencil" aria-hidden="true"></i></a><form th:if="${absence.status != 'CANCELLED'}" th:action="@{/employees/{employeeId}/absences/{id}/cancel(employeeId=${employee.id},id=${absence.id})}" method="post"><input type="hidden" name="version" th:value="${absence.version}"><button class="btn btn-ghost btn-icon" aria-label="Отменить отсутствие"><i data-lucide="ban" aria-hidden="true"></i></button></form></div>
+                </article>
+            </div>
+        </section>
+        <section id="employeeSkills" role="tabpanel" aria-labelledby="skillsTab" data-tab-panel hidden>
+            <div class="widget-heading"><div><p class="eyebrow">КОМПЕТЕНЦИИ</p><h2>Навыки сотрудника</h2></div><a sec:authorize="hasRole('ADMIN')" class="btn btn-sm btn-primary" th:href="@{/employees/{id}/skills/new(id=${employee.id})}"><i data-lucide="plus" class="me-1" aria-hidden="true"></i>Добавить</a></div>
+            <p th:if="${skills == null or #lists.isEmpty(skills)}" class="text-secondary">Навыки пока не добавлены.</p>
+            <div class="skill-grid" th:if="${skills != null}">
+                <article class="skill-card" th:each="item:${skills}"><div><strong th:text="${item.skill.name}"></strong><div class="skill-level" th:aria-label="${'Уровень '+item.proficiencyLevel+' из 5'}"><span th:each="n:${#numbers.sequence(1,5)}" th:classappend="${n <= item.proficiencyLevel ? 'is-filled' : ''}"></span></div><p><span th:if="${item.yearsExperience != null}" th:text="${item.yearsExperience+' г. опыта'}"></span><span th:if="${item.lastUsedDate != null}" th:text="${' · использовался '+#temporals.format(item.lastUsedDate,'MM.yyyy')}"></span></p></div><div sec:authorize="hasRole('ADMIN')" class="record-actions"><a class="btn btn-ghost btn-icon" th:href="@{/employees/{employeeId}/skills/{id}/edit(employeeId=${employee.id},id=${item.id})}" aria-label="Редактировать навык"><i data-lucide="pencil" aria-hidden="true"></i></a><form th:action="@{/employees/{employeeId}/skills/{id}/archive(employeeId=${employee.id},id=${item.id})}" method="post"><input type="hidden" name="version" th:value="${item.version}"><button class="btn btn-ghost btn-icon" aria-label="Убрать навык"><i data-lucide="archive" aria-hidden="true"></i></button></form></div></article>
+            </div>
+        </section>        <section id="employeeHistory" role="tabpanel" aria-labelledby="historyTab" data-tab-panel hidden class="history-grid">
+            <div class="detail-section">
+                <div class="section-heading"><div><p class="eyebrow">НАЗНАЧЕНИЯ</p><h2>Подразделения и должности</h2></div></div>
+                <p th:if="${assignmentHistory == null or #lists.isEmpty(assignmentHistory)}" class="text-secondary">История назначений пока отсутствует.</p>
+                <ol class="history-list" th:if="${assignmentHistory != null}">
+                    <li th:each="item:${assignmentHistory}">
+                        <span class="history-marker" aria-hidden="true"></span>
+                        <div><div class="history-title" th:text="${item.position.name+' · '+item.department.name}"></div>
+                        <div class="history-meta"><span th:text="${#temporals.format(item.effectiveFrom,'dd.MM.yyyy')}"></span><span>—</span><span th:text="${item.effectiveTo != null ? #temporals.format(item.effectiveTo,'dd.MM.yyyy') : 'по настоящее время'}"></span></div>
+                        <p th:if="${item.changeReason != null}" th:text="${item.changeReason}"></p></div>
+                    </li>
+                </ol>
+            </div>
+            <div class="detail-section">
+                <div class="section-heading"><div><p class="eyebrow">СТАТУСЫ</p><h2>История занятости</h2></div></div>
+                <p th:if="${statusHistory == null or #lists.isEmpty(statusHistory)}" class="text-secondary">История статусов пока отсутствует.</p>
+                <ol class="history-list" th:if="${statusHistory != null}">
+                    <li th:each="item:${statusHistory}">
+                        <span class="history-marker" aria-hidden="true"></span>
+                        <div><div class="history-title"><span th:replace="~{fragments/ui :: employeeStatus(${item.newStatus})}"></span></div>
+                        <div class="history-meta"><span th:text="${#temporals.format(item.effectiveDate,'dd.MM.yyyy')}"></span><span th:if="${item.previousStatus != null}" th:text="${'Предыдущий статус: '+item.previousStatus}"></span></div>
+                        <p th:if="${item.reason != null}" th:text="${item.reason}"></p></div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+    </div>
+</main>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

@@ -5,3 +5,9 @@ databaseChangeLog:
       file: db/changelog/002-seed-data.sql
   - include:
       file: db/changelog/003-organization-admin.sql
+  - include:
+      file: db/changelog/004-employee-history.sql
+  - include:
+      file: db/changelog/005-employee-absence-skills.sql
+  - include:
+      file: db/changelog/006-project-task-collaboration.sql
