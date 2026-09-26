@@ -73,7 +73,7 @@ public class WorkloadContextService {
             schedule.put(day.getDayOfWeek(), day.isWorkingDay() ? day.getPlannedHours() : BigDecimal.ZERO);
         }
         List<ExistingTask> tasks = taskRepository.findByAssigneeIdAndStatusCodeIn(e.getId(), ACTIVE_STATUSES).stream()
-                .map(t -> new ExistingTask(t.getId(),
+                .map(t -> new ExistingTask(t.getId(), t.getTaskNumber(), t.getTitle(),
                         t.getPlannedStartDate() == null ? t.getPlannedEndDate() : t.getPlannedStartDate(),
                         t.getPlannedEndDate(), t.getPlannedHours(), t.getActualHours(), t.getStatus().getCode()))
                 .toList();

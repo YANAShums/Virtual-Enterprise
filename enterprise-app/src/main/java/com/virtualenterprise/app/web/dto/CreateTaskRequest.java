@@ -15,7 +15,7 @@ public record CreateTaskRequest(
         LocalDate plannedStartDate,
         @NotNull LocalDate plannedEndDate,
         @NotNull @DecimalMin("0.25") @DecimalMax("10000") BigDecimal plannedHours,
-        UUID calculationRequestId,
+        @NotNull UUID calculationRequestId,
         Boolean overloadConfirmed,
         String overloadReason
 ) {}

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
@@ -31,7 +32,7 @@ public class WorkloadCalculationService {
                         .thenComparing(CandidateWorkloadResult::score, Comparator.reverseOrder())
                         .thenComparing(CandidateWorkloadResult::projectedLoadPercent))
                 .toList();
-        return new WorkloadEvaluationResponse(UUID.randomUUID(), results);
+        return new WorkloadEvaluationResponse(calculationId(request), results);
     }
 
     private CandidateWorkloadResult evaluateCandidate(WorkloadEvaluationRequest request,
@@ -84,7 +85,54 @@ public class WorkloadCalculationService {
         return new CandidateWorkloadResult(candidate.employeeId(), candidate.fullName(), anyAvailable,
                 scale(currentPercent), scale(projectedPercent), periodStatus,
                 scale(nvl(candidate.skillMatchPercent())), scale(score), dailyConflict,
-                warnings, daily);
+                warnings, daily, contributions(candidate, assigned.keySet()));
+    }
+
+    private List<WorkloadTaskContribution> contributions(CandidateContext candidate, Set<LocalDate> period) {
+        if (period.isEmpty()) return List.of();
+        LocalDate start = period.stream().min(LocalDate::compareTo).orElseThrow();
+        LocalDate end = period.stream().max(LocalDate::compareTo).orElseThrow();
+        return safe(candidate.existingTasks()).stream()
+                .filter(task -> ACTIVE_STATUSES.contains(task.statusCode()))
+                .filter(task -> task.startDate() != null && task.endDate() != null
+                        && !task.endDate().isBefore(start) && !task.startDate().isAfter(end))
+                .map(task -> {
+                    List<LocalDate> working = task.startDate().datesUntil(task.endDate().plusDays(1))
+                            .filter(d -> availableHours(candidate, d).signum() > 0).toList();
+                    Map<LocalDate, BigDecimal> distribution = equalDistribution(
+                            nvl(task.plannedHours()).subtract(nvl(task.actualHours())).max(BigDecimal.ZERO), working);
+                    BigDecimal hours = distribution.entrySet().stream()
+                            .filter(entry -> period.contains(entry.getKey())).map(Map.Entry::getValue)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    return new WorkloadTaskContribution(task.taskId(), task.taskNumber(), task.title(),
+                            task.startDate(), task.endDate(), scale(hours));
+                })
+                .filter(item -> item.assignedHours().signum() > 0)
+                .toList();
+    }
+
+    private UUID calculationId(WorkloadEvaluationRequest request) {
+        StringBuilder value = new StringBuilder()
+                .append(request.enterpriseId()).append('|').append(request.projectId()).append('|')
+                .append(request.plannedStartDate()).append('|').append(request.plannedEndDate()).append('|')
+                .append(nvl(request.plannedHours()).stripTrailingZeros().toPlainString());
+        safe(request.candidates()).stream().sorted(Comparator.comparing(CandidateContext::employeeId)).forEach(candidate -> {
+            value.append("|e:").append(candidate.employeeId()).append(':')
+                    .append(nvl(candidate.employmentRate()).stripTrailingZeros().toPlainString()).append(':')
+                    .append(candidate.projectMember()).append(':').append(candidate.activeTaskCount()).append(':')
+                    .append(candidate.activeProjectCount()).append(':').append(nvl(candidate.skillMatchPercent()));
+            Optional.ofNullable(candidate.scheduleHoursByDay()).orElse(Map.of()).entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey()).forEach(e -> value.append("|s:").append(e.getKey()).append(':').append(e.getValue()));
+            Optional.ofNullable(candidate.calendarHourOverrides()).orElse(Map.of()).entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey()).forEach(e -> value.append("|c:").append(e.getKey()).append(':').append(e.getValue()));
+            safe(candidate.absences()).stream().sorted(Comparator.comparing(AbsencePeriod::startDate))
+                    .forEach(a -> value.append("|a:").append(a.startDate()).append(':').append(a.endDate()));
+            safe(candidate.existingTasks()).stream().sorted(Comparator.comparing(ExistingTask::taskId))
+                    .forEach(t -> value.append("|t:").append(t.taskId()).append(':').append(t.startDate()).append(':')
+                            .append(t.endDate()).append(':').append(t.plannedHours()).append(':').append(t.actualHours())
+                            .append(':').append(t.statusCode()));
+        });
+        return UUID.nameUUIDFromBytes(value.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     private void distributeExistingTask(CandidateContext candidate, ExistingTask task, BigDecimal hours,

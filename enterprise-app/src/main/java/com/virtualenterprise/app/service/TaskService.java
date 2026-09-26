@@ -68,9 +68,14 @@ public class TaskService {
 
         WorkloadEvaluationResponse evaluation = workloadService.preview(project.getId(),
                 request.plannedStartDate() == null ? java.time.LocalDate.now() : request.plannedStartDate(),
-                request.plannedEndDate(), request.plannedHours(), List.of(assignee.getId()));
-        CandidateWorkloadResult result = evaluation.candidates().stream().findFirst()
-                .orElseThrow(() -> new AppException(HttpStatus.SERVICE_UNAVAILABLE, "WORKLOAD_SERVICE_UNAVAILABLE", "Не получен расчёт загрузки"));
+                request.plannedEndDate(), request.plannedHours(), List.of());
+        if (!evaluation.calculationRequestId().equals(request.calculationRequestId())) {
+            throw new AppException(HttpStatus.CONFLICT, "WORKLOAD_CHANGED",
+                    "Загрузка команды изменилась. Обновите расчёт перед созданием задачи");
+        }
+        CandidateWorkloadResult result = evaluation.candidates().stream()
+                .filter(candidate -> candidate.employeeId().equals(assignee.getId())).findFirst()
+                .orElseThrow(() -> new AppException(HttpStatus.UNPROCESSABLE_ENTITY, "EMPLOYEE_UNAVAILABLE", "Исполнитель больше не доступен для назначения"));
         if (!result.available() || result.status() == WorkloadStatus.UNAVAILABLE) {
             throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, "EMPLOYEE_UNAVAILABLE", "У сотрудника нет доступных часов");
         }
