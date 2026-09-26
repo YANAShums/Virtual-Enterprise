@@ -21,11 +21,14 @@ public class WorkloadContextService {
     private final EmployeeAbsenceRepository absenceRepository;
     private final TaskRepository taskRepository;
     private final ProductionCalendarDayRepository calendarRepository;
+    private final EmployeeSkillRepository employeeSkillRepository;
+    private final SkillRepository skillRepository;
     private final WorkloadClient client;
 
     public WorkloadContextService(ProjectRepository projectRepository, ProjectMemberRepository memberRepository,
                                   EmployeeRepository employeeRepository, EmployeeAbsenceRepository absenceRepository,
                                   TaskRepository taskRepository, ProductionCalendarDayRepository calendarRepository,
+                                  EmployeeSkillRepository employeeSkillRepository, SkillRepository skillRepository,
                                   WorkloadClient client) {
         this.projectRepository = projectRepository;
         this.memberRepository = memberRepository;
@@ -33,14 +36,35 @@ public class WorkloadContextService {
         this.absenceRepository = absenceRepository;
         this.taskRepository = taskRepository;
         this.calendarRepository = calendarRepository;
+        this.employeeSkillRepository = employeeSkillRepository;
+        this.skillRepository = skillRepository;
         this.client = client;
     }
 
     @Transactional(readOnly = true)
     public WorkloadEvaluationResponse preview(Long projectId, LocalDate start, LocalDate end,
                                                BigDecimal hours, List<Long> candidateIds) {
+        return preview(projectId,start,end,hours,candidateIds,List.of());
+    }
+
+    @Transactional(readOnly = true)
+    public WorkloadEvaluationResponse preview(Long projectId, LocalDate start, LocalDate end,
+                                               BigDecimal hours, List<Long> candidateIds, List<Long> requiredSkillIds) {
+        return preview(projectId,start,end,hours,candidateIds,requiredSkillIds,null);
+    }
+
+    @Transactional(readOnly = true)
+    public WorkloadEvaluationResponse preview(Long projectId, LocalDate start, LocalDate end,
+                                               BigDecimal hours, List<Long> candidateIds, List<Long> requiredSkillIds,
+                                               Long excludedTaskId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new NoSuchElementException("Проект не найден"));
+        Set<Long> requiredSkills = requiredSkillIds == null ? Set.of() : new LinkedHashSet<>(requiredSkillIds);
+        if (!requiredSkills.isEmpty()) {
+            Set<Long> valid = skillRepository.findByEnterpriseIdAndActiveTrueOrderByNameAsc(project.getEnterprise().getId())
+                    .stream().map(Skill::getId).collect(java.util.stream.Collectors.toSet());
+            if (!valid.containsAll(requiredSkills)) throw new IllegalArgumentException("Выбран недоступный навык");
+        }
         Set<Long> memberIds = memberRepository.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(projectId)
                 .stream().map(m -> m.getEmployee().getId()).collect(java.util.stream.Collectors.toSet());
         List<Employee> candidates;
@@ -54,7 +78,7 @@ public class WorkloadContextService {
         }
         List<CandidateContext> contexts = candidates.stream()
                 .filter(Employee::isActive)
-                .map(e -> toContext(e, memberIds.contains(e.getId()), start, end))
+                .map(e -> toContext(e, memberIds.contains(e.getId()), start, end, requiredSkills, excludedTaskId))
                 .toList();
         return client.evaluate(new WorkloadEvaluationRequest(project.getEnterprise().getId(), projectId,
                 start, end, hours == null ? BigDecimal.ZERO : hours, contexts));
@@ -62,17 +86,18 @@ public class WorkloadContextService {
 
     @Transactional(readOnly = true)
     public WorkloadEvaluationResponse currentForEmployees(List<Employee> employees, LocalDate start, LocalDate end) {
-        List<CandidateContext> contexts = employees.stream().map(e -> toContext(e, true, start, end)).toList();
+        List<CandidateContext> contexts = employees.stream().map(e -> toContext(e, true, start, end, Set.of(), null)).toList();
         Long enterpriseId = employees.isEmpty() ? 1L : employees.getFirst().getEnterprise().getId();
         return client.evaluate(new WorkloadEvaluationRequest(enterpriseId, null, start, end, BigDecimal.ZERO, contexts));
     }
 
-    private CandidateContext toContext(Employee e, boolean projectMember, LocalDate start, LocalDate end) {
+    private CandidateContext toContext(Employee e, boolean projectMember, LocalDate start, LocalDate end, Set<Long> requiredSkills, Long excludedTaskId) {
         Map<Integer, BigDecimal> schedule = new HashMap<>();
         for (WorkScheduleDay day : e.getWorkSchedule().getDays()) {
             schedule.put(day.getDayOfWeek(), day.isWorkingDay() ? day.getPlannedHours() : BigDecimal.ZERO);
         }
         List<ExistingTask> tasks = taskRepository.findByAssigneeIdAndStatusCodeIn(e.getId(), ACTIVE_STATUSES).stream()
+                .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
                 .map(t -> new ExistingTask(t.getId(), t.getTaskNumber(), t.getTitle(),
                         t.getPlannedStartDate() == null ? t.getPlannedEndDate() : t.getPlannedStartDate(),
                         t.getPlannedEndDate(), t.getPlannedHours(), t.getActualHours(), t.getStatus().getCode()))
@@ -91,10 +116,17 @@ public class WorkloadContextService {
                         "HOLIDAY".equals(day.getDayType()) || "WEEKEND".equals(day.getDayType())
                                 ? BigDecimal.ZERO
                                 : Optional.ofNullable(day.getWorkingHoursOverride()).orElse(BigDecimal.ZERO)));
-        int activeTaskCount = (int) taskRepository.countByAssigneeIdAndStatusCodeIn(e.getId(), ACTIVE_STATUSES);
+        int activeTaskCount = tasks.size();
         int activeProjectCount = (int) memberRepository.countByEmployeeIdAndActiveTrue(e.getId());
+        BigDecimal skillMatch = null;
+        if (!requiredSkills.isEmpty()) {
+            long matched = employeeSkillRepository.findByEmployeeIdAndActiveTrueOrderBySkillNameAsc(e.getId()).stream()
+                    .map(item -> item.getSkill().getId()).filter(requiredSkills::contains).distinct().count();
+            skillMatch = BigDecimal.valueOf(matched * 100L)
+                    .divide(BigDecimal.valueOf(requiredSkills.size()),2,java.math.RoundingMode.HALF_UP);
+        }
         return new CandidateContext(e.getId(), e.getFullName(), e.getDepartment().getId(),
                 e.getEmploymentRate(), schedule, calendarOverrides, absences, tasks, projectMember,
-                BigDecimal.valueOf(100), activeTaskCount, activeProjectCount);
+                skillMatch, activeTaskCount, activeProjectCount);
     }
 }

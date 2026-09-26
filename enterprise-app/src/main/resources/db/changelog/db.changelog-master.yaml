@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/005-employee-absence-skills.sql
   - include:
       file: db/changelog/006-project-task-collaboration.sql
+  - include:
+      file: db/changelog/007-task-recommendations.sql

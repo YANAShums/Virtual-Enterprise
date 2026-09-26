@@ -22,13 +22,14 @@ public class KanbanPageController {
     private final TaskStatusRepository statuses;
     private final TaskPriorityRepository priorities;
     private final DepartmentRepository departments;
+    private final SkillRepository skills;
     private final WorkloadContextService workloadService;
 
     public KanbanPageController(ProjectRepository projects, ProjectMemberRepository members, TaskRepository tasks,
                                 TaskStatusRepository statuses, TaskPriorityRepository priorities,
-                                DepartmentRepository departments, WorkloadContextService workloadService) {
+                                DepartmentRepository departments, SkillRepository skills, WorkloadContextService workloadService) {
         this.projects = projects; this.members = members; this.tasks = tasks; this.statuses = statuses;
-        this.priorities = priorities; this.departments = departments; this.workloadService = workloadService;
+        this.priorities = priorities; this.departments = departments; this.skills = skills; this.workloadService = workloadService;
     }
 
     @GetMapping("/kanban")
@@ -56,6 +57,7 @@ public class KanbanPageController {
         model.addAttribute("loadByEmployee", loadByEmployee);
         model.addAttribute("priorities", priorities.findByActiveTrueOrderByWeightAsc());
         model.addAttribute("departments", departments.findByActiveTrueOrderByNameAsc());
+        model.addAttribute("skills", skills.findByActiveTrueOrderByNameAsc());
         return "kanban/board";
     }
 }

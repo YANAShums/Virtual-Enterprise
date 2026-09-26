@@ -81,11 +81,12 @@ public class WorkloadCalculationService {
             daily.add(new DailyWorkload(date, scale(a), scale(e), scale(c), scale(p), status));
         }
 
-        BigDecimal score = score(candidate, periodStatus, projectedPercent);
+        BigDecimal score = score(candidate, periodStatus, projectedPercent, anyAvailable, dailyConflict);
+        List<String> explanations = explanations(candidate, currentPercent, projectedPercent, periodStatus);
         return new CandidateWorkloadResult(candidate.employeeId(), candidate.fullName(), anyAvailable,
                 scale(currentPercent), scale(projectedPercent), periodStatus,
-                scale(nvl(candidate.skillMatchPercent())), scale(score), dailyConflict,
-                warnings, daily, contributions(candidate, assigned.keySet()));
+                candidate.skillMatchPercent() == null ? null : scale(candidate.skillMatchPercent()), scale(score), dailyConflict,
+                warnings, explanations, daily, contributions(candidate, assigned.keySet()));
     }
 
     private List<WorkloadTaskContribution> contributions(CandidateContext candidate, Set<LocalDate> period) {
@@ -195,19 +196,36 @@ public class WorkloadCalculationService {
         return WorkloadStatus.SEVERE_UNDERLOAD;
     }
 
-    private BigDecimal score(CandidateContext c, WorkloadStatus status, BigDecimal projected) {
-        BigDecimal score = BigDecimal.ZERO;
-        if (c.projectMember()) score = score.add(BigDecimal.valueOf(25));
-        score = score.add(nvl(c.skillMatchPercent()).multiply(BigDecimal.valueOf(0.30)));
-        score = score.add(switch (status) {
-            case SEVERE_UNDERLOAD, UNDERLOAD, NORMAL -> BigDecimal.valueOf(30);
-            case WARNING -> BigDecimal.valueOf(12);
-            case CRITICAL, UNAVAILABLE -> BigDecimal.ZERO;
-        });
-        score = score.add(BigDecimal.valueOf(Math.max(0, 5 - Math.min(c.activeTaskCount(), 5))));
-        score = score.add(BigDecimal.valueOf(Math.max(0, 5 - Math.min(c.activeProjectCount(), 5))));
-        if (projected.compareTo(BigDecimal.valueOf(100)) <= 0) score = score.add(BigDecimal.valueOf(5));
-        return score;
+    private BigDecimal score(CandidateContext c, WorkloadStatus status, BigDecimal projected,
+                             boolean available, boolean dailyConflict) {
+        BigDecimal workloadScore = projected.compareTo(BigDecimal.valueOf(100)) <= 0
+                ? BigDecimal.valueOf(100).subtract(projected).max(BigDecimal.ZERO)
+                : BigDecimal.ZERO;
+        BigDecimal skillScore = c.skillMatchPercent() == null ? BigDecimal.valueOf(100) : nvl(c.skillMatchPercent());
+        BigDecimal availabilityScore = !available ? BigDecimal.ZERO
+                : dailyConflict ? BigDecimal.valueOf(25)
+                : status == WorkloadStatus.WARNING ? BigDecimal.valueOf(60) : BigDecimal.valueOf(100);
+        BigDecimal membershipScore = c.projectMember() ? BigDecimal.valueOf(100) : BigDecimal.ZERO;
+        BigDecimal activeTasksScore = BigDecimal.valueOf(Math.max(0, 100 - Math.min(c.activeTaskCount(), 10) * 10L));
+        return workloadScore.multiply(BigDecimal.valueOf(0.40))
+                .add(skillScore.multiply(BigDecimal.valueOf(0.25)))
+                .add(availabilityScore.multiply(BigDecimal.valueOf(0.15)))
+                .add(membershipScore.multiply(BigDecimal.valueOf(0.10)))
+                .add(activeTasksScore.multiply(BigDecimal.valueOf(0.10)))
+                .max(BigDecimal.ZERO).min(BigDecimal.valueOf(100));
+    }
+
+    private List<String> explanations(CandidateContext candidate, BigDecimal current, BigDecimal projected,
+                                      WorkloadStatus status) {
+        List<String> result = new ArrayList<>();
+        result.add("Загрузка: " + scale(current) + "% → " + scale(projected) + "%");
+        if (candidate.skillMatchPercent() == null) result.add("Требования к навыкам не заданы");
+        else result.add("Совпадение навыков: " + scale(candidate.skillMatchPercent()) + "%");
+        result.add(candidate.projectMember() ? "Участник команды проекта" : "Не входит в команду проекта");
+        if (status == WorkloadStatus.WARNING) result.add("После назначения загрузка выше 100%");
+        else if (status == WorkloadStatus.CRITICAL) result.add("Требуется подтверждение критической перегрузки");
+        else result.add("Активных задач: " + candidate.activeTaskCount());
+        return result.stream().limit(4).toList();
     }
 
     private void validate(WorkloadEvaluationRequest request) {

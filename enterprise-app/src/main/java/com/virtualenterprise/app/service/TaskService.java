@@ -8,6 +8,7 @@ import com.virtualenterprise.app.security.CurrentUserService;
 import com.virtualenterprise.app.web.dto.CreateTaskRequest;
 import com.virtualenterprise.app.web.dto.TaskStatusChangeRequest;
 import com.virtualenterprise.app.web.dto.TaskEditForm;
+import com.virtualenterprise.app.web.dto.TaskReassignRequest;
 import com.virtualenterprise.contracts.workload.CandidateWorkloadResult;
 import com.virtualenterprise.contracts.workload.WorkloadEvaluationResponse;
 import com.virtualenterprise.contracts.workload.WorkloadStatus;
@@ -68,7 +69,7 @@ public class TaskService {
 
         WorkloadEvaluationResponse evaluation = workloadService.preview(project.getId(),
                 request.plannedStartDate() == null ? java.time.LocalDate.now() : request.plannedStartDate(),
-                request.plannedEndDate(), request.plannedHours(), List.of());
+                request.plannedEndDate(), request.plannedHours(), List.of(), request.requiredSkillIds());
         if (!evaluation.calculationRequestId().equals(request.calculationRequestId())) {
             throw new AppException(HttpStatus.CONFLICT, "WORKLOAD_CHANGED",
                     "Загрузка команды изменилась. Обновите расчёт перед созданием задачи");
@@ -107,6 +108,9 @@ public class TaskService {
         task.setKanbanOrder((maxOrder == null ? BigDecimal.ZERO : maxOrder).add(BigDecimal.valueOf(1000)));
         task.setOverloadConfirmed(result.status() == WorkloadStatus.CRITICAL);
         Task saved = taskRepository.saveAndFlush(task);
+        Optional.ofNullable(request.requiredSkillIds()).orElse(List.of()).stream().distinct().forEach(skillId ->
+                jdbc.update("INSERT INTO task_required_skills(task_id,skill_id,required_level) VALUES (?,?,1)",
+                        saved.getId(),skillId));
 
         if (result.status() == WorkloadStatus.CRITICAL) {
             jdbc.update("INSERT INTO overload_confirmations(task_id, employee_id, confirmed_by_user_id, load_before_percent, " +
@@ -122,6 +126,70 @@ public class TaskService {
         return saved;
     }
 
+
+    @Transactional(readOnly = true)
+    public WorkloadEvaluationResponse recommendations(Long taskId) {
+        Task task=taskRepository.findById(taskId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
+        return workloadService.preview(task.getProject().getId(),
+                task.getPlannedStartDate()==null ? java.time.LocalDate.now() : task.getPlannedStartDate(),
+                task.getPlannedEndDate(),task.getPlannedHours(),List.of(),requiredSkillIds(taskId),taskId);
+    }
+
+    @Transactional
+    public Task reassign(Long taskId, TaskReassignRequest request) {
+        Task task=taskRepository.findById(taskId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
+        if(!Objects.equals(task.getVersion(),request.version()))
+            throw new AppException(HttpStatus.CONFLICT,"OPTIMISTIC_LOCK","Задача уже изменена другим пользователем");
+        Employee target=employeeRepository.findById(request.employeeId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Сотрудник не найден"));
+        boolean member=memberRepository.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(task.getProject().getId())
+                .stream().anyMatch(item -> item.getEmployee().getId().equals(target.getId()));
+        if(!member) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_NOT_IN_PROJECT","Сотрудник не входит в команду проекта");
+        WorkloadEvaluationResponse evaluation=workloadService.preview(task.getProject().getId(),
+                task.getPlannedStartDate()==null ? java.time.LocalDate.now() : task.getPlannedStartDate(),
+                task.getPlannedEndDate(),task.getPlannedHours(),List.of(),requiredSkillIds(taskId),taskId);
+        if(!evaluation.calculationRequestId().equals(request.calculationRequestId()))
+            throw new AppException(HttpStatus.CONFLICT,"WORKLOAD_CHANGED","Загрузка команды изменилась. Обновите рекомендации");
+        CandidateWorkloadResult result=evaluation.candidates().stream()
+                .filter(candidate -> candidate.employeeId().equals(target.getId())).findFirst()
+                .orElseThrow(() -> new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_UNAVAILABLE","Кандидат недоступен"));
+        if(!result.available() || result.status()==WorkloadStatus.UNAVAILABLE)
+            throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_UNAVAILABLE","У сотрудника нет доступных часов");
+        if(result.status()==WorkloadStatus.CRITICAL && !Boolean.TRUE.equals(request.overloadConfirmed()))
+            throw new AppException(HttpStatus.CONFLICT,"OVERLOAD_CONFIRMATION_REQUIRED","Нужно подтвердить критическую перегрузку",
+                    Map.of("projectedLoadPercent",result.projectedLoadPercent()));
+        Employee previous=task.getAssignee();
+        AppUser user=currentUserService.requireCurrentUser();
+        task.setAssignee(target); task.setAssigneeDepartment(target.getDepartment());
+        task.setOverloadConfirmed(result.status()==WorkloadStatus.CRITICAL);
+        Task saved;
+        try { saved=taskRepository.saveAndFlush(task); }
+        catch(OptimisticLockingFailureException exception) {
+            throw new AppException(HttpStatus.CONFLICT,"OPTIMISTIC_LOCK","Задача уже изменена другим пользователем");
+        }
+        jdbc.update("INSERT INTO task_assignment_history(task_id,previous_employee_id,new_employee_id,changed_by_user_id,"+
+                        "calculation_request_id,load_before_percent,load_after_percent,reason,changed_at) "+
+                        "VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6))",
+                saved.getId(),previous==null?null:previous.getId(),target.getId(),user.getId(),
+                evaluation.calculationRequestId().toString(),result.currentLoadPercent(),result.projectedLoadPercent(),request.reason());
+        if(result.status()==WorkloadStatus.CRITICAL)
+            jdbc.update("INSERT INTO overload_confirmations(task_id,employee_id,confirmed_by_user_id,load_before_percent,"+
+                            "load_after_percent,threshold_code,reason_code,comment,calculation_request_id,confirmed_at) "+
+                            "VALUES (?,?,?,?,?,'CRITICAL','MANAGER_APPROVAL',?,?,CURRENT_TIMESTAMP(6))",
+                    saved.getId(),target.getId(),user.getId(),result.currentLoadPercent(),result.projectedLoadPercent(),
+                    request.reason(),evaluation.calculationRequestId().toString());
+        writeEvent("TASK",saved.getId(),"TASK_REASSIGNED",Map.of("taskId",saved.getId(),"employeeId",target.getId()));
+        writeAudit(user.getId(),"TASK_REASSIGNED","TASK",saved.getId(),
+                Map.of("assigneeId",previous==null?0:previous.getId()),Map.of("assigneeId",target.getId()));
+        return saved;
+    }
+
+    private List<Long> requiredSkillIds(Long taskId) {
+        return jdbc.queryForList("SELECT skill_id FROM task_required_skills WHERE task_id=? ORDER BY skill_id",
+                Long.class,taskId);
+    }
 
     @Transactional(readOnly = true)
     public TaskEditForm form(Long taskId) {

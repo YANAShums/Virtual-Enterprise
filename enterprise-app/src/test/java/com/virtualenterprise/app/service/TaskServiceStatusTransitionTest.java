@@ -5,6 +5,7 @@ import com.virtualenterprise.app.domain.*;
 import com.virtualenterprise.app.repository.*;
 import com.virtualenterprise.app.security.CurrentUserService;
 import com.virtualenterprise.app.web.dto.TaskStatusChangeRequest;
+import com.virtualenterprise.app.web.dto.TaskReassignRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -57,6 +58,14 @@ class TaskServiceStatusTransitionTest {
         AppException error=assertThrows(AppException.class,
                 () -> service.changeStatus(12L,new TaskStatusChangeRequest("IN_PROGRESS",1L,null,null)));
         assertEquals("OPTIMISTIC_LOCK",error.getCode());verifyNoInteractions(statuses);
+    }
+
+    @Test
+    void staleVersionIsRejectedBeforeReassignmentCalculation(){
+        AppException error=assertThrows(AppException.class,
+                () -> service.reassign(12L,new TaskReassignRequest(4L,1L,UUID.randomUUID(),false,null)));
+        assertEquals("OPTIMISTIC_LOCK",error.getCode());
+        verifyNoInteractions(projects,members,employees,workload);
     }
 
     private TaskStatus status(Long id,String code){TaskStatus status=mock(TaskStatus.class);when(status.getId()).thenReturn(id);when(status.getCode()).thenReturn(code);return status;}

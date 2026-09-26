@@ -10,6 +10,7 @@
     let previewTimer;
     const previewButton = document.getElementById('previewButton');
     const createButton = document.getElementById('createTaskButton');
+    const requiredSkillIds = () => [...document.querySelectorAll('.task-skill:checked')].map(input => Number(input.value));
 
     const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const start = document.getElementById('taskStart');
@@ -38,7 +39,8 @@
             plannedStartDate: start.value,
             plannedEndDate: end.value,
             plannedHours: Number(document.getElementById('taskHours').value),
-            candidateIds: []
+            candidateIds: [],
+            requiredSkillIds: requiredSkillIds()
         };
         try {
             const response = await apiFetch('/api/v1/tasks/workload-preview',{method:'POST',body:JSON.stringify(payload)});
@@ -52,11 +54,11 @@
     function renderCandidates(candidates) {
         document.getElementById('candidateHint').textContent=candidates.length ? 'Выберите исполнителя. Справа показана загрузка после назначения.' : 'Измените период или трудоёмкость и повторите расчёт.';
         if (!candidates.length) { candidatesBox.innerHTML='<div class="alert alert-warning">Нет доступных кандидатов.</div>'; return; }
-        candidatesBox.innerHTML = candidates.map(c => `
+        candidatesBox.innerHTML = candidates.map((c,index) => `
             <label class="candidate-option status-${statusClass(c.status)} ${!c.available ? 'disabled':''}" data-employee-id="${c.employeeId}" data-status="${c.status}">
                 <input type="radio" name="assignee" value="${c.employeeId}" ${!c.available ? 'disabled':''} class="form-check-input mt-1">
-                <div><strong>${escapeHtml(c.fullName)}</strong><div class="small text-secondary">${escapeHtml((c.warnings||[]).join(' · ') || 'Доступен для назначения')}</div>${c.skillMatchPercent == null ? '' : `<div class="small text-secondary">Соответствие навыков: ${Number(c.skillMatchPercent)}%</div>`}</div>
-                <div class="candidate-load"><div class="small text-secondary">Сейчас → после</div><strong>${Number(c.currentLoadPercent)}% → ${Number(c.projectedLoadPercent)}%</strong><div class="workload-badge workload-${statusClass(c.status)}">${escapeHtml(statusLabel(c.status))}</div></div>
+                <div><div class="candidate-name"><strong>${escapeHtml(c.fullName)}</strong>${index===0 && c.available ? '<span class="recommendation-label">Рекомендуем</span>':''}</div><ul class="candidate-reasons">${(c.explanations||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>${(c.warnings||[]).length ? `<div class="small text-danger">${escapeHtml(c.warnings.join(' · '))}</div>`:''}</div>
+                <div class="candidate-load"><div class="candidate-score"><span>Рейтинг</span><strong>${Number(c.score)}</strong></div><div class="small text-secondary">Сейчас → после</div><strong>${Number(c.currentLoadPercent)}% → ${Number(c.projectedLoadPercent)}%</strong><div class="workload-badge workload-${statusClass(c.status)}">${escapeHtml(statusLabel(c.status))}</div></div>
             </label>`).join('');
         candidatesBox.querySelectorAll('input[name="assignee"]').forEach(input => input.addEventListener('change', () => {
             candidatesBox.querySelectorAll('.candidate-option').forEach(el => el.classList.remove('selected'));
@@ -78,13 +80,15 @@
     });
 
     document.getElementById('previewButton').addEventListener('click', calculate);
-    ['taskProject','taskStart','taskEnd','taskHours'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+    const invalidatePreview = () => {
         ++previewGeneration; clearTimeout(previewTimer); previewResponse=null; selectedCandidate=null;
         previewButton.disabled=false; createButton.disabled=true; createButton.title='Сначала рассчитайте загрузку и выберите исполнителя'; end.setCustomValidity('');
         document.getElementById('overloadConfirmed').checked=false;
         candidatesBox.innerHTML='<p class="small text-secondary">Параметры изменены. Обновляем расчёт…</p>'; criticalBox.classList.add('d-none');
         previewTimer=setTimeout(calculate,600);
-    }));
+    };
+    ['taskProject','taskStart','taskEnd','taskHours'].forEach(id => document.getElementById(id).addEventListener('input', invalidatePreview));
+    document.querySelectorAll('.task-skill').forEach(input => input.addEventListener('change',invalidatePreview));
 
     form.addEventListener('submit', async event => {
         event.preventDefault(); clearAlert();
@@ -100,6 +104,7 @@
             statusCode:'PLANNED', priorityCode:document.getElementById('taskPriority').value,
             plannedStartDate:start.value, plannedEndDate:end.value,
             plannedHours:Number(document.getElementById('taskHours').value),
+            requiredSkillIds:requiredSkillIds(),
             calculationRequestId:previewResponse.calculationRequestId,
             overloadConfirmed:isCritical && document.getElementById('overloadConfirmed').checked,
             overloadReason:isCritical ? document.getElementById('overloadReason').value : null

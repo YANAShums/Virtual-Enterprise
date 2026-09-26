@@ -35,3 +35,15 @@ main.board-page { padding:24px!important; }
 @media(max-width:700px) { main.board-page { padding:16px!important; }.board-toolbar .search-field { width:100%; }.board-toolbar .form-select { max-width:100%; flex:1; }.kanban-column { flex-basis:300px; }.candidate-option { grid-template-columns:18px minmax(0,1fr); }.candidate-load { grid-column:2; text-align:left; display:flex; gap:8px; align-items:center; flex-wrap:wrap; } }
 
 .task-card{box-shadow:var(--shadow-card)}.task-card:hover{transform:translateY(-1px)}.kanban-column-header strong::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text-muted);margin-right:8px}.kanban-column[data-status="IN_PROGRESS"] .kanban-column-header strong::before{background:var(--blue)}.kanban-column[data-status="REVIEW"] .kanban-column-header strong::before{background:var(--purple)}.kanban-column[data-status="DONE"] .kanban-column-header strong::before{background:var(--success)}.task-status-select{border-radius:999px}.board-toolbar{padding:12px;background:white;border:1px solid var(--border);border-radius:14px}.board-toolbar .form-select{background-color:white;border-color:var(--border)}.filter-check{background:var(--surface-soft);min-height:38px;border:1px solid var(--border);border-radius:10px}.board-summary{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;color:var(--text-secondary);font-size:12px}.board-summary strong{color:var(--text-primary)}
+
+.skill-requirements { border:0; padding:0; }
+.skill-requirements legend { float:none; width:auto; margin-bottom:4px; }
+.skill-choice-list { display:flex; flex-wrap:wrap; gap:7px; }
+.skill-choice { display:flex; align-items:center; gap:7px; padding:7px 10px; border:1px solid var(--border); border-radius:999px; cursor:pointer; font-size:12px; background:var(--surface); }
+.skill-choice:has(input:checked) { border-color:var(--primary); color:var(--primary-dark); background:var(--surface-teal); }
+.empty-inline { padding:10px 12px; border-radius:10px; background:var(--surface-soft); color:var(--text-secondary); font-size:12px; }
+.candidate-name { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.recommendation-label { padding:2px 7px; border-radius:999px; background:var(--surface-teal); color:var(--primary-dark); font-size:10px; font-weight:600; }
+.candidate-reasons { margin:6px 0 0; padding-left:16px; color:var(--text-secondary); font-size:10px; line-height:1.45; }
+.candidate-score { display:flex; justify-content:flex-end; align-items:baseline; gap:5px; color:var(--text-secondary); font-size:10px; margin-bottom:3px; }
+.candidate-score strong { font-size:18px; color:var(--primary-dark); }

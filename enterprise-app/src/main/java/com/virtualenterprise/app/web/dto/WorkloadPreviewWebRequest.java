@@ -10,5 +10,6 @@ public record WorkloadPreviewWebRequest(
         @NotNull LocalDate plannedStartDate,
         @NotNull LocalDate plannedEndDate,
         @NotNull @DecimalMin("0.00") BigDecimal plannedHours,
-        List<Long> candidateIds
+        List<Long> candidateIds,
+        List<Long> requiredSkillIds
 ) {}

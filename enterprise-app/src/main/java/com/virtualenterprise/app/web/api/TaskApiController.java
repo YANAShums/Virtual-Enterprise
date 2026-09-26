@@ -26,7 +26,7 @@ public class TaskApiController {
     @PreAuthorize("hasAnyRole('ADMIN','ENTERPRISE_MANAGER','DEPARTMENT_MANAGER','PROJECT_MANAGER')")
     public WorkloadEvaluationResponse preview(@Valid @RequestBody WorkloadPreviewWebRequest request) {
         return workloadService.preview(request.projectId(), request.plannedStartDate(), request.plannedEndDate(),
-                request.plannedHours(), request.candidateIds());
+                request.plannedHours(), request.candidateIds(), request.requiredSkillIds());
     }
 
     @PostMapping
@@ -34,6 +34,18 @@ public class TaskApiController {
     public ResponseEntity<TaskResponse> create(@Valid @RequestBody CreateTaskRequest request) {
         Task task = taskService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(TaskResponse.from(task));
+    }
+
+    @GetMapping("/{taskId}/recommendations")
+    @PreAuthorize("hasAnyRole('ADMIN','ENTERPRISE_MANAGER','DEPARTMENT_MANAGER','PROJECT_MANAGER')")
+    public WorkloadEvaluationResponse recommendations(@PathVariable Long taskId) {
+        return taskService.recommendations(taskId);
+    }
+
+    @PostMapping("/{taskId}/reassign")
+    @PreAuthorize("hasAnyRole('ADMIN','ENTERPRISE_MANAGER','DEPARTMENT_MANAGER','PROJECT_MANAGER')")
+    public TaskResponse reassign(@PathVariable Long taskId, @Valid @RequestBody TaskReassignRequest request) {
+        return TaskResponse.from(taskService.reassign(taskId,request));
     }
 
     @PatchMapping("/{taskId}/status")

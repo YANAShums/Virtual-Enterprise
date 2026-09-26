@@ -14,6 +14,7 @@ public record CandidateWorkloadResult(
         BigDecimal score,
         boolean dailyConflict,
         List<String> warnings,
+        List<String> explanations,
         List<DailyWorkload> daily,
         List<WorkloadTaskContribution> taskContributions
 ) {
