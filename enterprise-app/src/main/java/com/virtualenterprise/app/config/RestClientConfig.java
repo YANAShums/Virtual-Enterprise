@@ -8,6 +8,15 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
     @Bean
+    RestClient mlRestClient(RestClient.Builder builder,
+                            @Value("${ml.base-url}") String baseUrl,
+                            @Value("${ml.service-token}") String token) {
+        return builder.baseUrl(baseUrl)
+                .defaultHeader("X-Service-Token",token)
+                .build();
+    }
+
+    @Bean
     RestClient workloadRestClient(RestClient.Builder builder,
                                   @Value("${workload.base-url}") String baseUrl,
                                   @Value("${workload.service-token}") String token) {

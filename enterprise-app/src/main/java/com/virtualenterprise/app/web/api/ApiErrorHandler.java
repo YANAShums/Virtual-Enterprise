@@ -26,6 +26,18 @@ public class ApiErrorHandler {
                 "Проверьте заполнение полей", Map.of("fieldErrors", fields)));
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    ResponseEntity<Map<String, Object>> accessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error(HttpStatus.FORBIDDEN, "ACCESS_DENIED",
+                "Недостаточно прав для выполнения операции", Map.of()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    ResponseEntity<Map<String, Object>> invalidArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(error(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT",
+                ex.getMessage(), Map.of()));
+    }
+
     @ExceptionHandler(RestClientException.class)
     ResponseEntity<Map<String, Object>> workload(RestClientException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error(HttpStatus.SERVICE_UNAVAILABLE,

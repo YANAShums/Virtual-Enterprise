@@ -61,6 +61,7 @@ services:
       WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:-change-me-internal-token}
       ML_SERVICE_URL: http://attrition-ml-service:8082
       ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-change-me-ml-token}
+      ML_FEATURE_TIME_ZONE: ${ML_FEATURE_TIME_ZONE:-Europe/Minsk}
       FILE_STORAGE_PATH: /data/files
       SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES:-30}
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-20}
@@ -126,6 +127,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-virtual_app}
       DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
       ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-change-me-ml-token}
+      ML_FEATURE_TIME_ZONE: ${ML_FEATURE_TIME_ZONE:-Europe/Minsk}
       MODEL_STORAGE_PATH: /data/models
     volumes:
       - model_storage:/data/models

@@ -6,4 +6,47 @@
     <comment>Initialize migration tracking; domain tables belong to later stages.</comment>
     <sql>SELECT 1;</sql>
   </changeSet>
+  <changeSet id="ml-002-feature-snapshots" author="flowstaff">
+    <comment>Store deterministic operational and historical attrition feature snapshots.</comment>
+    <sql><![CDATA[
+      CREATE TABLE attrition_feature_snapshots (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        employee_snapshot_id CHAR(36) NOT NULL,
+        employee_id BIGINT UNSIGNED NOT NULL,
+        snapshot_date DATE NOT NULL,
+        tenure_months BIGINT NOT NULL,
+        employment_rate DECIMAL(4,2) NOT NULL,
+        department_code VARCHAR(50) NOT NULL,
+        position_code VARCHAR(50) NOT NULL,
+        active_projects_count INT NOT NULL,
+        active_tasks_count INT NOT NULL,
+        overdue_tasks_30d INT NOT NULL,
+        completed_tasks_90d INT NOT NULL,
+        avg_task_delay_days_90d DECIMAL(9,2) NOT NULL,
+        avg_workload_30d DECIMAL(7,2) NOT NULL,
+        avg_workload_90d DECIMAL(7,2) NOT NULL,
+        overload_days_30d INT NOT NULL,
+        overload_days_90d INT NOT NULL,
+        absence_days_90d INT NOT NULL,
+        task_reassignments_90d INT NOT NULL,
+        project_changes_180d INT NOT NULL,
+        target_label TINYINT NULL,
+        source VARCHAR(30) NOT NULL,
+        schema_version VARCHAR(80) NOT NULL,
+        generated_at DATETIME(6) NOT NULL,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        UNIQUE KEY ux_feature_snapshot_id (employee_snapshot_id),
+        UNIQUE KEY ux_feature_employee_date_source (employee_id,snapshot_date,source),
+        KEY ix_feature_snapshot_date (snapshot_date),
+        CONSTRAINT ck_feature_target CHECK (target_label IS NULL OR target_label IN (0,1)),
+        CONSTRAINT ck_feature_nonnegative CHECK (
+          tenure_months>=0 AND active_projects_count>=0 AND active_tasks_count>=0
+          AND overdue_tasks_30d>=0 AND completed_tasks_90d>=0
+          AND overload_days_30d>=0 AND overload_days_90d>=0
+          AND absence_days_90d>=0 AND task_reassignments_90d>=0 AND project_changes_180d>=0
+        )
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ]]></sql>
+  </changeSet>
 </databaseChangeLog>

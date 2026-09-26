@@ -44,5 +44,11 @@ workload:
   base-url: ${WORKLOAD_SERVICE_URL:http://localhost:8081}
   service-token: ${WORKLOAD_SERVICE_TOKEN:change-me-internal-token}
 
+ml:
+  base-url: ${ML_SERVICE_URL:http://localhost:8082}
+  service-token: ${ML_SERVICE_TOKEN:change-me-ml-token}
+  feature-snapshot-cron: ${ML_FEATURE_SNAPSHOT_CRON:0 0 2 * * *}
+  feature-time-zone: ${ML_FEATURE_TIME_ZONE:Europe/Minsk}
+
 file-storage:
   path: ${FILE_STORAGE_PATH:./data/files}
