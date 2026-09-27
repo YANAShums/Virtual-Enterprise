@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Импорт ML-датасета')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<main id="mainContent" tabindex="-1" class="container-fluid admin-page ml-import-page">
+  <div class="page-heading">
+    <div><h1>ML-датасет</h1><p>Исторические признаки для обучения модели текучести</p></div>
+  </div>
+  <nav class="admin-sections" aria-label="Административные разделы">
+    <a th:href="@{/admin(section='employees')}">Сотрудники</a><a th:href="@{/admin(section='departments')}">Подразделения</a>
+    <a th:href="@{/admin(section='positions')}">Должности</a><a th:href="@{/admin(section='users')}">Пользователи</a>
+    <a th:href="@{/admin(section='schedules')}">Рабочие графики</a><a th:href="@{/admin(section='absences')}">Отсутствия</a>
+    <a th:href="@{/admin(section='settings')}">Настройки</a><a th:href="@{/admin(section='roles')}">Роли</a>
+    <a th:href="@{/admin(section='calendar')}">Календарь</a><a class="active" aria-current="page" th:href="@{/admin/ml}">ML-датасет</a>
+  </nav>
+
+  <div class="alert alert-danger" role="alert" th:if="${formError}" th:text="${formError}"></div>
+  <div class="ml-import-layout">
+    <section class="card ml-upload-card" aria-labelledby="uploadTitle">
+      <div class="card-body">
+        <div class="section-heading">
+          <span class="section-icon"><i data-lucide="database-zap" aria-hidden="true"></i></span>
+          <div><h2 id="uploadTitle">Импорт исторических данных</h2><p>Проверка выполняется до сохранения. Корректные строки будут переданы в набор для обучения.</p></div>
+        </div>
+        <form th:action="@{/admin/ml/import}" method="post" enctype="multipart/form-data" class="ml-upload-form">
+          <label class="ml-file-field" for="datasetFile">
+            <i data-lucide="file-up" aria-hidden="true"></i>
+            <span><strong>Выберите CSV-файл</strong><small>UTF-8, до 5 МБ</small></span>
+            <input id="datasetFile" name="file" type="file" accept=".csv,text/csv" required aria-describedby="datasetHelp">
+          </label>
+          <div id="datasetHelp" class="ml-schema-note">
+            <i data-lucide="circle-check" aria-hidden="true"></i>
+            <span>Заголовки должны совпадать с шаблоном. Пустые числовые признаки разрешены; целевой признак принимает только 0 или 1.</span>
+          </div>
+          <div class="ml-upload-actions">
+            <button class="btn btn-primary" type="submit"><i data-lucide="upload" aria-hidden="true"></i>Проверить и импортировать</button>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/ml/template.csv}"><i data-lucide="download" aria-hidden="true"></i>Скачать шаблон</a>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <aside class="card ml-stage-card" aria-labelledby="trainingTitle">
+      <div class="card-body"><span class="section-icon muted"><i data-lucide="brain-circuit" aria-hidden="true"></i></span>
+        <h2 id="trainingTitle">Обучение модели</h2>
+        <p>Запуск обучения и сведения о версиях модели будут добавлены на этапе 9.</p>
+        <span class="status-badge neutral">Следующий этап</span>
+      </div>
+    </aside>
+  </div>
+
+  <section class="card ml-result-card" th:if="${result}" aria-labelledby="resultTitle">
+    <div class="card-body">
+      <div class="ml-result-head"><div><h2 id="resultTitle">Результат импорта</h2><p th:text="${result.fileName}"></p></div>
+        <span class="status-badge" th:classappend="${result.status == 'COMPLETED'} ? 'success' : (${result.status == 'FAILED'} ? 'danger' : 'warning')"
+              th:text="${result.status == 'COMPLETED'} ? 'Импорт завершён' : (${result.status == 'FAILED'} ? 'Файл отклонён' : 'Есть ошибки')"></span>
+      </div>
+      <div class="ml-result-metrics">
+        <div><span>Всего строк</span><strong th:text="${result.rowCount}">0</strong></div>
+        <div><span>Принято</span><strong class="text-success" th:text="${result.validCount}">0</strong></div>
+        <div><span>Отклонено</span><strong class="text-danger" th:text="${result.invalidCount}">0</strong></div>
+      </div>
+      <div th:if="${!#lists.isEmpty(result.errors)}" class="table-responsive ml-errors">
+        <table class="table align-middle mb-0"><caption class="visually-hidden">Ошибки в строках CSV</caption>
+          <thead><tr><th>Строка</th><th>Поле</th><th>Причина</th></tr></thead>
+          <tbody><tr th:each="error : ${result.errors}"><td th:text="${error.row}"></td><td><code th:text="${error.field}"></code></td><td th:text="${error.message}"></td></tr></tbody>
+        </table>
+      </div>
+      <div class="ml-success-note" th:if="${#lists.isEmpty(result.errors)}"><i data-lucide="circle-check-big" aria-hidden="true"></i><span>Все строки прошли проверку и сохранены.</span></div>
+    </div>
+  </section>
+</main>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body></html>

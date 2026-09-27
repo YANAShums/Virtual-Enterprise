@@ -7,11 +7,12 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import pymysql
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
+from app.import_service import import_dataset, safe_filename
 
-app = FastAPI(title="FlowStaff AI Attrition Service", version="0.2.0",
+app = FastAPI(title="FlowStaff AI Attrition Service", version="0.3.0",
               docs_url=None, redoc_url=None, openapi_url=None)
 
 
@@ -26,8 +27,8 @@ def check_database():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots')")
-            if cursor.fetchone()[0] != 2:
+            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import')")
+            if cursor.fetchone()[0] != 3:
                 raise RuntimeError("ML migrations are not complete")
     finally:
         connection.close()
@@ -146,3 +147,22 @@ def save_feature_snapshots(snapshots: list[FeatureSnapshot],
         return store_feature_snapshots(snapshots)
     except Exception:
         raise HTTPException(status_code=503, detail="FEATURE_STORAGE_UNAVAILABLE")
+
+
+@app.post("/internal/v1/datasets/import")
+async def upload_training_dataset(file: UploadFile = File(...),
+                                  x_service_token: str | None = Header(default=None)):
+    require_service_token(x_service_token)
+    filename = safe_filename(file.filename)
+    if not filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="CSV_FILE_REQUIRED")
+    max_bytes = int(os.getenv("ML_IMPORT_MAX_BYTES", "5242880"))
+    content = await file.read(max_bytes + 1)
+    if not content:
+        raise HTTPException(status_code=400, detail="EMPTY_DATASET")
+    if len(content) > max_bytes:
+        raise HTTPException(status_code=413, detail="DATASET_TOO_LARGE")
+    try:
+        return import_dataset(content, filename, feature_today(), get_connection)
+    except Exception:
+        raise HTTPException(status_code=503, detail="DATASET_STORAGE_UNAVAILABLE")

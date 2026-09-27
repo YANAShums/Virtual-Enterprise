@@ -49,4 +49,35 @@
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ]]></sql>
   </changeSet>
+  <changeSet id="ml-003-dataset-import" author="flowstaff">
+    <comment>Store historical dataset import batches and allow missing numeric features for later imputation.</comment>
+    <sql><![CDATA[
+      CREATE TABLE ml_import_batches (
+        batch_id CHAR(36) PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL,
+        row_count INT NOT NULL,
+        valid_count INT NOT NULL,
+        invalid_count INT NOT NULL,
+        imported_at DATETIME(6) NOT NULL,
+        status VARCHAR(30) NOT NULL,
+        schema_version VARCHAR(80) NOT NULL,
+        KEY ix_ml_import_batches_imported_at (imported_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ALTER TABLE attrition_feature_snapshots
+        MODIFY tenure_months BIGINT NULL,
+        MODIFY employment_rate DECIMAL(4,2) NULL,
+        MODIFY active_projects_count INT NULL,
+        MODIFY active_tasks_count INT NULL,
+        MODIFY overdue_tasks_30d INT NULL,
+        MODIFY completed_tasks_90d INT NULL,
+        MODIFY avg_task_delay_days_90d DECIMAL(9,2) NULL,
+        MODIFY avg_workload_30d DECIMAL(7,2) NULL,
+        MODIFY avg_workload_90d DECIMAL(7,2) NULL,
+        MODIFY overload_days_30d INT NULL,
+        MODIFY overload_days_90d INT NULL,
+        MODIFY absence_days_90d INT NULL,
+        MODIFY task_reassignments_90d INT NULL,
+        MODIFY project_changes_180d INT NULL;
+    ]]></sql>
+  </changeSet>
 </databaseChangeLog>

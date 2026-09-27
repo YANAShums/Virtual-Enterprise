@@ -49,6 +49,7 @@ ml:
   service-token: ${ML_SERVICE_TOKEN:change-me-ml-token}
   feature-snapshot-cron: ${ML_FEATURE_SNAPSHOT_CRON:0 0 2 * * *}
   feature-time-zone: ${ML_FEATURE_TIME_ZONE:Europe/Minsk}
+  import-max-bytes: ${ML_IMPORT_MAX_BYTES:5242880}
 
 file-storage:
   path: ${FILE_STORAGE_PATH:./data/files}

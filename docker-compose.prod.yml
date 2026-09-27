@@ -24,6 +24,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:?Set WORKLOAD_SERVICE_TOKEN}
       ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:?Set ML_SERVICE_TOKEN}
+      ML_IMPORT_MAX_BYTES: ${ML_IMPORT_MAX_BYTES:-5242880}
       WORKLOAD_SERVICE_URL: https://workload-service:8081
       ML_SERVICE_URL: https://attrition-ml-service:8082
       TLS_CERTIFICATE: file:/run/tls/enterprise.crt
@@ -57,6 +58,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:?Set ML_SERVICE_TOKEN}
+      ML_IMPORT_MAX_BYTES: ${ML_IMPORT_MAX_BYTES:-5242880}
       TLS_CERTIFICATE: /run/tls/ml.crt
       TLS_PRIVATE_KEY: /run/tls/ml.key
       TLS_CA_FILE: /run/tls/ca.crt
