@@ -80,4 +80,38 @@
         MODIFY project_changes_180d INT NULL;
     ]]></sql>
   </changeSet>
+  <changeSet id="ml-004-model-training-registry" author="flowstaff">
+    <comment>Register versioned attrition models and reproducible training runs.</comment>
+    <sql><![CDATA[
+      CREATE TABLE ml_model_versions (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        version VARCHAR(80) NOT NULL UNIQUE,
+        algorithm VARCHAR(80) NOT NULL,
+        trained_at DATETIME(6) NOT NULL,
+        active BOOLEAN NOT NULL DEFAULT FALSE,
+        artifact_path VARCHAR(500) NOT NULL,
+        feature_schema_hash CHAR(64) NOT NULL,
+        training_dataset_hash CHAR(64) NOT NULL,
+        feature_schema JSON NOT NULL,
+        metrics JSON NOT NULL,
+        training_rows INT NOT NULL,
+        test_rows INT NOT NULL,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        KEY ix_ml_model_versions_active (active,trained_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      CREATE TABLE ml_training_runs (
+        run_id CHAR(36) PRIMARY KEY,
+        model_version_id BIGINT UNSIGNED NULL,
+        started_at DATETIME(6) NOT NULL,
+        finished_at DATETIME(6) NULL,
+        status VARCHAR(30) NOT NULL,
+        parameters JSON NOT NULL,
+        metrics JSON NULL,
+        error_message VARCHAR(1000) NULL,
+        idempotency_key CHAR(36) NOT NULL UNIQUE,
+        CONSTRAINT fk_training_run_model FOREIGN KEY (model_version_id) REFERENCES ml_model_versions(id),
+        KEY ix_ml_training_runs_started (started_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ]]></sql>
+  </changeSet>
 </databaseChangeLog>

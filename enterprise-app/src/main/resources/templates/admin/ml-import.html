@@ -16,6 +16,8 @@
   </nav>
 
   <div class="alert alert-danger" role="alert" th:if="${formError}" th:text="${formError}"></div>
+  <div class="alert alert-danger" role="alert" th:if="${trainingError}" th:text="${trainingError}"></div>
+  <div class="alert alert-success" role="status" th:if="${trainingResult}" th:text="${'Обучение завершено. Активирована модель ' + trainingResult.version + '.'}"></div>
   <div class="ml-import-layout">
     <section class="card ml-upload-card" aria-labelledby="uploadTitle">
       <div class="card-body">
@@ -41,14 +43,44 @@
       </div>
     </section>
 
-    <aside class="card ml-stage-card" aria-labelledby="trainingTitle">
+    <aside class="card ml-stage-card ml-model-card" aria-labelledby="trainingTitle">
       <div class="card-body"><span class="section-icon muted"><i data-lucide="brain-circuit" aria-hidden="true"></i></span>
-        <h2 id="trainingTitle">Обучение модели</h2>
-        <p>Запуск обучения и сведения о версиях модели будут добавлены на этапе 9.</p>
-        <span class="status-badge neutral">Следующий этап</span>
+        <h2 id="trainingTitle">Модель текучести</h2>
+        <div th:if="${modelError}" class="ml-model-state"><span class="status-badge danger">Сервис недоступен</span><p th:text="${modelError}"></p></div>
+        <div th:if="${modelInfo != null}" class="ml-model-state">
+          <span class="status-badge" th:classappend="${modelInfo.status == 'ACTIVE'} ? 'success' : (${modelInfo.status == 'NOT_TRAINED'} ? 'neutral' : 'danger')"
+                th:text="${modelInfo.status == 'ACTIVE'} ? 'Активна' : (${modelInfo.status == 'NOT_TRAINED'} ? 'Не обучена' : 'Артефакт недоступен')"></span>
+          <div th:if="${modelInfo.status == 'ACTIVE'}" class="ml-model-identity"><strong th:text="${modelInfo.version}"></strong><span th:text="${modelInfo.algorithm}"></span><small th:text="${'Обучена: ' + #strings.replace(modelInfo.trainedAt,'T',' ')}"></small></div>
+          <p th:if="${modelInfo.status == 'NOT_TRAINED'}">После импорта размеченных данных можно создать первую версию.</p>
+          <p class="ml-row-count"><strong th:text="${modelInfo.trainingRowCount}">0</strong> размеченных строк доступно</p>
+          <form th:action="@{/admin/ml/train}" method="post">
+            <button class="btn btn-primary w-100" type="submit" th:disabled="${modelInfo.trainingRowCount < 10}">
+              <i data-lucide="sparkles" aria-hidden="true"></i><span th:text="${modelInfo.status == 'ACTIVE'} ? 'Обучить новую версию' : 'Обучить модель'"></span>
+            </button>
+          </form>
+          <small th:if="${modelInfo.trainingRowCount < 10}" class="text-secondary">Нужно не менее 10 строк и примеры обоих классов.</small>
+        </div>
       </div>
     </aside>
   </div>
+
+  <section class="card ml-model-details" th:if="${modelInfo != null and modelInfo.status == 'ACTIVE'}" aria-labelledby="modelMetricsTitle">
+    <div class="card-body">
+      <div class="ml-result-head"><div><h2 id="modelMetricsTitle">Качество активной модели</h2><p>Метрики рассчитаны на отложенной тестовой выборке.</p></div><span class="status-badge success" th:text="${modelInfo.trainingRows + ' train / ' + modelInfo.testRows + ' test'}"></span></div>
+      <div class="ml-metric-grid">
+        <div><span>ROC-AUC</span><strong th:text="${#numbers.formatDecimal(modelInfo.metrics.rocAuc,1,3)}"></strong></div>
+        <div><span>F1</span><strong th:text="${#numbers.formatDecimal(modelInfo.metrics.f1,1,3)}"></strong></div>
+        <div><span>Recall</span><strong th:text="${#numbers.formatDecimal(modelInfo.metrics.recall,1,3)}"></strong></div>
+        <div><span>Precision</span><strong th:text="${#numbers.formatDecimal(modelInfo.metrics.precision,1,3)}"></strong></div>
+        <div><span>Accuracy</span><strong th:text="${#numbers.formatDecimal(modelInfo.metrics.accuracy,1,3)}"></strong></div>
+      </div>
+      <details class="ml-schema-details"><summary>Состав модели и контроль воспроизводимости</summary><div class="ml-schema-content">
+        <div><span>Признаки</span><p><code th:each="feature : ${modelInfo.featureNames}" th:text="${feature}"></code></p></div>
+        <div><span>Хеш схемы</span><code th:text="${modelInfo.featureSchemaHash}"></code></div>
+        <div><span>Хеш датасета</span><code th:text="${modelInfo.trainingDatasetHash}"></code></div>
+      </div></details>
+    </div>
+  </section>
 
   <section class="card ml-result-card" th:if="${result}" aria-labelledby="resultTitle">
     <div class="card-body">

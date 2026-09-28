@@ -2,3 +2,9 @@ fastapi==0.115.12
 uvicorn==0.34.2
 PyMySQL[rsa]==1.1.1
 python-multipart==0.0.20
+joblib==1.4.2
+numpy==2.2.4
+scikit-learn==1.6.1
+scipy==1.18.1
+threadpoolctl==3.7.0
+tzdata==2025.2

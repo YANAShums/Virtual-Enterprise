@@ -17,6 +17,7 @@ def test_readiness_requires_token(monkeypatch):
 def test_readiness_success(monkeypatch):
     monkeypatch.setenv("ML_SERVICE_TOKEN", "test-token")
     monkeypatch.setattr(main, "check_database", lambda: None)
+    monkeypatch.setattr(main, "model_info", lambda *_: {"status": "NOT_TRAINED"})
     response = client.get("/internal/v1/health", headers={"X-Service-Token": "test-token"})
     assert response.status_code == 200
     assert response.json()["model"] == "NOT_TRAINED"

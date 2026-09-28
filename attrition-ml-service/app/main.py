@@ -11,8 +11,9 @@ from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from app.import_service import import_dataset, safe_filename
+from app.training import TrainingError, model_info, train_and_register
 
-app = FastAPI(title="FlowStaff AI Attrition Service", version="0.3.0",
+app = FastAPI(title="FlowStaff AI Attrition Service", version="0.4.0",
               docs_url=None, redoc_url=None, openapi_url=None)
 
 
@@ -27,8 +28,8 @@ def check_database():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import')")
-            if cursor.fetchone()[0] != 3:
+            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import','ml-004-model-training-registry')")
+            if cursor.fetchone()[0] != 4:
                 raise RuntimeError("ML migrations are not complete")
     finally:
         connection.close()
@@ -69,6 +70,11 @@ class FeatureSnapshot(BaseModel):
     source: str = Field(pattern="^(OPERATIONAL|IMPORT)$")
     schemaVersion: str = Field(min_length=1, max_length=80)
     generatedAt: datetime
+
+
+class TrainRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    idempotencyKey: UUID
 
 
 _COLUMNS = (
@@ -131,7 +137,12 @@ def readiness(x_service_token: str | None = Header(default=None)):
         check_database()
     except Exception:
         return JSONResponse(status_code=503, content={"status": "DOWN", "database": "DOWN"})
-    return {"status": "UP", "database": "UP", "model": "NOT_TRAINED"}
+    try:
+        current_model = model_info(get_connection, os.getenv("MODEL_STORAGE_PATH", "/data/models"))
+        model_status = current_model["status"]
+    except Exception:
+        model_status = "UNAVAILABLE"
+    return {"status": "UP", "database": "UP", "model": model_status}
 
 
 @app.post("/internal/v1/features/snapshots")
@@ -166,3 +177,25 @@ async def upload_training_dataset(file: UploadFile = File(...),
         return import_dataset(content, filename, feature_today(), get_connection)
     except Exception:
         raise HTTPException(status_code=503, detail="DATASET_STORAGE_UNAVAILABLE")
+
+
+@app.post("/internal/v1/train")
+def train_model(request: TrainRequest, x_service_token: str | None = Header(default=None)):
+    require_service_token(x_service_token)
+    try:
+        return train_and_register(get_connection, os.getenv("MODEL_STORAGE_PATH", "/data/models"),
+                                  str(request.idempotencyKey))
+    except TrainingError as exc:
+        status = 409 if exc.code in {"TRAINING_ALREADY_RUNNING", "IDEMPOTENCY_KEY_REUSED"} else 422
+        raise HTTPException(status_code=status, detail={"code": exc.code, "message": str(exc)})
+    except Exception:
+        raise HTTPException(status_code=503, detail="MODEL_TRAINING_UNAVAILABLE")
+
+
+@app.get("/internal/v1/model/info")
+def current_model_info(x_service_token: str | None = Header(default=None)):
+    require_service_token(x_service_token)
+    try:
+        return model_info(get_connection, os.getenv("MODEL_STORAGE_PATH", "/data/models"))
+    except Exception:
+        raise HTTPException(status_code=503, detail="MODEL_REGISTRY_UNAVAILABLE")
