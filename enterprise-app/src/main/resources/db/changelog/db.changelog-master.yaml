@@ -13,3 +13,5 @@ databaseChangeLog:
       file: db/changelog/006-project-task-collaboration.sql
   - include:
       file: db/changelog/007-task-recommendations.sql
+  - include:
+      file: db/changelog/008-attrition-predictions.sql
