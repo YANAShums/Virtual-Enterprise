@@ -114,4 +114,29 @@
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ]]></sql>
   </changeSet>
+  <changeSet id="ml-005-attrition-risk-thresholds" author="flowstaff">
+    <comment>Store configurable probability boundaries used by model serving.</comment>
+    <sql><![CDATA[
+      CREATE TABLE attrition_risk_thresholds (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        risk_level VARCHAR(20) NOT NULL UNIQUE,
+        min_probability DECIMAL(7,6) NOT NULL,
+        max_probability DECIMAL(7,6) NULL,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        display_order INT NOT NULL,
+        updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        CONSTRAINT ck_attrition_risk_probability CHECK (
+          min_probability >= 0 AND min_probability <= 1
+          AND (max_probability IS NULL OR (max_probability > min_probability AND max_probability <= 1))
+        )
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      INSERT INTO attrition_risk_thresholds
+        (risk_level,min_probability,max_probability,active,display_order)
+      VALUES
+        ('LOW',0.000000,0.300000,TRUE,1),
+        ('MEDIUM',0.300000,0.600000,TRUE,2),
+        ('HIGH',0.600000,0.800000,TRUE,3),
+        ('CRITICAL',0.800000,NULL,TRUE,4);
+    ]]></sql>
+  </changeSet>
 </databaseChangeLog>

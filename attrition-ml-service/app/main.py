@@ -9,11 +9,12 @@ from zoneinfo import ZoneInfo
 import pymysql
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.import_service import import_dataset, safe_filename
+from app.prediction import PredictionError, load_serving_model, predict_many
 from app.training import TrainingError, model_info, train_and_register
 
-app = FastAPI(title="FlowStaff AI Attrition Service", version="0.4.0",
+app = FastAPI(title="FlowStaff AI Attrition Service", version="0.5.0",
               docs_url=None, redoc_url=None, openapi_url=None)
 
 
@@ -28,8 +29,8 @@ def check_database():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import','ml-004-model-training-registry')")
-            if cursor.fetchone()[0] != 4:
+            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import','ml-004-model-training-registry','ml-005-attrition-risk-thresholds')")
+            if cursor.fetchone()[0] != 5:
                 raise RuntimeError("ML migrations are not complete")
     finally:
         connection.close()
@@ -75,6 +76,45 @@ class FeatureSnapshot(BaseModel):
 class TrainRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     idempotencyKey: UUID
+
+
+class PredictionFeatures(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    employeeId: int = Field(gt=0)
+    snapshotDate: date
+    tenureMonths: int | None = Field(default=None, ge=0)
+    employmentRate: Decimal | None = Field(default=None, gt=0)
+    departmentCode: str = Field(min_length=1, max_length=50)
+    positionCode: str = Field(min_length=1, max_length=50)
+    activeProjectsCount: int | None = Field(default=None, ge=0)
+    activeTasksCount: int | None = Field(default=None, ge=0)
+    overdueTasks30d: int | None = Field(default=None, ge=0)
+    completedTasks90d: int | None = Field(default=None, ge=0)
+    avgTaskDelayDays90d: Decimal | None = None
+    avgWorkload30d: Decimal | None = Field(default=None, ge=0)
+    avgWorkload90d: Decimal | None = Field(default=None, ge=0)
+    overloadDays30d: int | None = Field(default=None, ge=0)
+    overloadDays90d: int | None = Field(default=None, ge=0)
+    absenceDays90d: int | None = Field(default=None, ge=0)
+    taskReassignments90d: int | None = Field(default=None, ge=0)
+    projectChanges180d: int | None = Field(default=None, ge=0)
+
+
+class BatchPredictionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[dict] = Field(min_length=1)
+
+
+_PREDICTION_FIELDS = {
+    "tenure_months": "tenureMonths", "employment_rate": "employmentRate",
+    "department_code": "departmentCode", "position_code": "positionCode",
+    "active_projects_count": "activeProjectsCount", "active_tasks_count": "activeTasksCount",
+    "overdue_tasks_30d": "overdueTasks30d", "completed_tasks_90d": "completedTasks90d",
+    "avg_task_delay_days_90d": "avgTaskDelayDays90d", "avg_workload_30d": "avgWorkload30d",
+    "avg_workload_90d": "avgWorkload90d", "overload_days_30d": "overloadDays30d",
+    "overload_days_90d": "overloadDays90d", "absence_days_90d": "absenceDays90d",
+    "task_reassignments_90d": "taskReassignments90d", "project_changes_180d": "projectChanges180d",
+}
 
 
 _COLUMNS = (
@@ -199,3 +239,66 @@ def current_model_info(x_service_token: str | None = Header(default=None)):
         return model_info(get_connection, os.getenv("MODEL_STORAGE_PATH", "/data/models"))
     except Exception:
         raise HTTPException(status_code=503, detail="MODEL_REGISTRY_UNAVAILABLE")
+
+
+@app.post("/internal/v1/predict")
+def predict(request: PredictionFeatures, x_service_token: str | None = Header(default=None)):
+    require_service_token(x_service_token)
+    if request.snapshotDate > feature_today():
+        raise HTTPException(status_code=422, detail="FUTURE_SNAPSHOT_DATE")
+    try:
+        model = load_serving_model(get_connection, os.getenv("MODEL_STORAGE_PATH", "/data/models"))
+        result = predict_many(model, [_prediction_row(request)])[0]
+        return {"employeeId": request.employeeId, "snapshotDate": request.snapshotDate, **result}
+    except PredictionError as exc:
+        _raise_prediction_error(exc)
+    except Exception:
+        raise HTTPException(status_code=503, detail="MODEL_PREDICTION_UNAVAILABLE")
+
+
+@app.post("/internal/v1/predict/batch")
+def predict_batch(request: BatchPredictionRequest,
+                  x_service_token: str | None = Header(default=None)):
+    require_service_token(x_service_token)
+    max_size = int(os.getenv("ML_PREDICT_BATCH_SIZE", "100"))
+    if len(request.items) > max_size:
+        raise HTTPException(status_code=422, detail={"code": "BATCH_TOO_LARGE", "maxSize": max_size})
+    valid: list[PredictionFeatures] = []
+    errors = []
+    today = feature_today()
+    for index, raw in enumerate(request.items):
+        try:
+            item = PredictionFeatures.model_validate(raw)
+            if item.snapshotDate > today:
+                raise ValueError("FUTURE_SNAPSHOT_DATE")
+            valid.append(item)
+        except (ValidationError, ValueError) as exc:
+            errors.append({
+                "index": index,
+                "employeeId": raw.get("employeeId") if isinstance(raw, dict) else None,
+                "code": "FUTURE_SNAPSHOT_DATE" if str(exc) == "FUTURE_SNAPSHOT_DATE" else "INVALID_FEATURES",
+                "message": "Набор признаков не прошёл проверку.",
+            })
+    if not valid:
+        return {"predictions": [], "errors": errors}
+    try:
+        model = load_serving_model(get_connection, os.getenv("MODEL_STORAGE_PATH", "/data/models"))
+        calculated = predict_many(model, [_prediction_row(item) for item in valid])
+        predictions = [
+            {"employeeId": item.employeeId, "snapshotDate": item.snapshotDate, **result}
+            for item, result in zip(valid, calculated)
+        ]
+        return {"predictions": predictions, "errors": errors}
+    except PredictionError as exc:
+        _raise_prediction_error(exc)
+    except Exception:
+        raise HTTPException(status_code=503, detail="MODEL_PREDICTION_UNAVAILABLE")
+
+
+def _prediction_row(request: PredictionFeatures) -> dict:
+    return {target: getattr(request, source) for target, source in _PREDICTION_FIELDS.items()}
+
+
+def _raise_prediction_error(exc: PredictionError):
+    status = 409 if exc.code == "MODEL_NOT_TRAINED" else 503
+    raise HTTPException(status_code=status, detail={"code": exc.code, "message": str(exc)})
