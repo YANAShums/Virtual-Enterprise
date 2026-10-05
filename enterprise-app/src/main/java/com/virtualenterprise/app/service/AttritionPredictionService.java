@@ -33,16 +33,19 @@ public class AttritionPredictionService {
     private final AttritionPredictionStore store;
     private final AuditTrailService audit;
     private final MlClientProperties properties;
+    private final NotificationService notifications;
 
     public AttritionPredictionService(FeatureSnapshotService features, AttritionFeatureAccessService access,
                                       AttritionPredictionGateway gateway, AttritionPredictionStore store,
-                                      AuditTrailService audit, MlClientProperties properties) {
+                                      AuditTrailService audit, MlClientProperties properties,
+                                      NotificationService notifications) {
         this.features = features;
         this.access = access;
         this.gateway = gateway;
         this.store = store;
         this.audit = audit;
         this.properties = properties;
+        this.notifications = notifications;
     }
 
     public StoredAttritionPrediction latest(Long employeeId) {
@@ -56,10 +59,12 @@ public class AttritionPredictionService {
     public StoredAttritionPrediction recalculateEmployee(Long employeeId, LocalDate snapshotDate) {
         access.assertCanView(employeeId);
         AttritionFeatureSnapshot snapshot = features.preview(employeeId, snapshotDate);
+        StoredAttritionPrediction previous = store.latest(employeeId).orElse(null);
         try {
             Prediction result = gateway.predict(PredictionInput.from(snapshot));
             validatePrediction(result, employeeId, snapshotDate);
             StoredAttritionPrediction saved = store.save(result, LocalDateTime.now());
+            notifications.attritionRiskChanged(employeeId, previous, saved);
             audit.record("ATTRITION_PREDICTION_RECALCULATED", "EMPLOYEE", employeeId, null,
                     Map.of("modelVersion", result.modelVersion(), "snapshotDate", snapshotDate.toString()));
             return saved;
@@ -99,7 +104,9 @@ public class AttritionPredictionService {
                     }
                 }
                 for (Prediction prediction : result.predictions()) {
-                    store.save(prediction, LocalDateTime.now());
+                    StoredAttritionPrediction previous = store.latest(prediction.employeeId()).orElse(null);
+                    StoredAttritionPrediction saved = store.save(prediction, LocalDateTime.now());
+                    notifications.attritionRiskChanged(prediction.employeeId(), previous, saved);
                     versions.add(prediction.modelVersion());
                     succeeded++;
                 }

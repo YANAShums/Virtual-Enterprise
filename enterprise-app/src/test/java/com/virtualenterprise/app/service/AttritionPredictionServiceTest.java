@@ -35,6 +35,7 @@ class AttritionPredictionServiceTest {
     @Mock AttritionPredictionGateway gateway;
     @Mock AttritionPredictionStore store;
     @Mock AuditTrailService audit;
+    @Mock NotificationService notifications;
     MlClientProperties properties;
     AttritionPredictionService service;
 
@@ -43,7 +44,7 @@ class AttritionPredictionServiceTest {
         properties = new MlClientProperties();
         properties.setPredictionBatchSize(100);
         properties.setStaleAfter(Duration.ofHours(24));
-        service = new AttritionPredictionService(features, access, gateway, store, audit, properties);
+        service = new AttritionPredictionService(features, access, gateway, store, audit, properties, notifications);
     }
 
     @Test

@@ -41,17 +41,18 @@ public class TaskService {
     private final CurrentUserService currentUserService;
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final NotificationService notifications;
 
     public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository,
                        ProjectMemberRepository memberRepository, EmployeeRepository employeeRepository,
                        TaskStatusRepository statusRepository, TaskPriorityRepository priorityRepository,
                        WorkloadContextService workloadService, CurrentUserService currentUserService,
-                       JdbcTemplate jdbc, ObjectMapper objectMapper) {
+                       JdbcTemplate jdbc, ObjectMapper objectMapper, NotificationService notifications) {
         this.taskRepository = taskRepository; this.projectRepository = projectRepository;
         this.memberRepository = memberRepository; this.employeeRepository = employeeRepository;
         this.statusRepository = statusRepository; this.priorityRepository = priorityRepository;
         this.workloadService = workloadService; this.currentUserService = currentUserService;
-        this.jdbc = jdbc; this.objectMapper = objectMapper;
+        this.jdbc = jdbc; this.objectMapper = objectMapper; this.notifications = notifications;
     }
 
     @Transactional
@@ -119,6 +120,7 @@ public class TaskService {
                     saved.getId(), assignee.getId(), user.getId(), result.currentLoadPercent(), result.projectedLoadPercent(),
                     "CRITICAL", request.overloadReason() == null ? "OTHER" : request.overloadReason(),
                     "Подтверждено в форме создания задачи", evaluation.calculationRequestId().toString());
+            notifications.criticalOverload(assignee.getId(), saved.getId(), result.projectedLoadPercent());
         }
         writeEvent("TASK", saved.getId(), "TASK_CREATED", Map.of("taskId", saved.getId(), "employeeId", assignee.getId()));
         writeAudit(user.getId(), "TASK_CREATED", "TASK", saved.getId(), null,
@@ -174,12 +176,14 @@ public class TaskService {
                         "VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6))",
                 saved.getId(),previous==null?null:previous.getId(),target.getId(),user.getId(),
                 evaluation.calculationRequestId().toString(),result.currentLoadPercent(),result.projectedLoadPercent(),request.reason());
-        if(result.status()==WorkloadStatus.CRITICAL)
+        if(result.status()==WorkloadStatus.CRITICAL) {
             jdbc.update("INSERT INTO overload_confirmations(task_id,employee_id,confirmed_by_user_id,load_before_percent,"+
                             "load_after_percent,threshold_code,reason_code,comment,calculation_request_id,confirmed_at) "+
                             "VALUES (?,?,?,?,?,'CRITICAL','MANAGER_APPROVAL',?,?,CURRENT_TIMESTAMP(6))",
                     saved.getId(),target.getId(),user.getId(),result.currentLoadPercent(),result.projectedLoadPercent(),
                     request.reason(),evaluation.calculationRequestId().toString());
+            notifications.criticalOverload(target.getId(), saved.getId(), result.projectedLoadPercent());
+        }
         writeEvent("TASK",saved.getId(),"TASK_REASSIGNED",Map.of("taskId",saved.getId(),"employeeId",target.getId()));
         writeAudit(user.getId(),"TASK_REASSIGNED","TASK",saved.getId(),
                 Map.of("assigneeId",previous==null?0:previous.getId()),Map.of("assigneeId",target.getId()));

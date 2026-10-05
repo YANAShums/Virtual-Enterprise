@@ -26,7 +26,8 @@ class TaskServiceStatusTransitionTest {
     private final WorkloadContextService workload=mock(WorkloadContextService.class);
     private final CurrentUserService currentUser=mock(CurrentUserService.class);
     private final JdbcTemplate jdbc=mock(JdbcTemplate.class);
-    private final TaskService service=new TaskService(tasks,projects,members,employees,statuses,priorities,workload,currentUser,jdbc,new ObjectMapper());
+    private final NotificationService notifications=mock(NotificationService.class);
+    private final TaskService service=new TaskService(tasks,projects,members,employees,statuses,priorities,workload,currentUser,jdbc,new ObjectMapper(),notifications);
     private Task task;
     private TaskStatus planned;
 

@@ -11,8 +11,12 @@ import java.util.stream.Collectors;
 @Service
 public class OverviewViewService {
     private final EmployeeRepository employees; private final ProjectRepository projects; private final TaskRepository tasks; private final WorkloadContextService workload;
-    public OverviewViewService(EmployeeRepository employees, ProjectRepository projects, TaskRepository tasks, WorkloadContextService workload) {
+    private final AttritionAnalyticsService attrition; private final NotificationService notifications;
+    public OverviewViewService(EmployeeRepository employees, ProjectRepository projects, TaskRepository tasks,
+                               WorkloadContextService workload, AttritionAnalyticsService attrition,
+                               NotificationService notifications) {
         this.employees=employees; this.projects=projects; this.tasks=tasks; this.workload=workload;
+        this.attrition=attrition; this.notifications=notifications;
     }
     public record DepartmentLoad(String name, BigDecimal percent) {}
     public Map<String,Object> overview() {
@@ -35,6 +39,16 @@ public class OverviewViewService {
             var groups=team.stream().filter(e -> byId.containsKey(e.getId())).collect(Collectors.groupingBy(e -> e.getDepartment().getName(),TreeMap::new,Collectors.toList()));
             view.put("departmentLoads",groups.entrySet().stream().map(entry -> new DepartmentLoad(entry.getKey(),entry.getValue().stream().map(e -> byId.get(e.getId())).reduce(BigDecimal.ZERO,BigDecimal::add).divide(BigDecimal.valueOf(entry.getValue().size()),0,RoundingMode.HALF_UP))).toList());
         } catch(Exception ex) { view.put("workloadError","Сервис загрузки временно недоступен. Остальные данные актуальны."); }
+        view.put("attritionAvailable",false);
+        try {
+            var risk=attrition.overview(new AttritionAnalyticsService.Filter(null,null,null,null,null,null,null,null));
+            view.put("attritionAvailable",true);view.put("highRiskCount",risk.highCount());
+            view.put("criticalRiskCount",risk.criticalCount());view.put("averageAttritionProbability",risk.averageProbability());
+            view.put("riskEmployees",risk.rows().stream().limit(3).toList());
+            view.put("unreadNotificationCount",notifications.unreadCount());
+        } catch(AppException ex) {
+            if(!"ACCESS_DENIED".equals(ex.getCode())) view.put("attritionError","Кадровая аналитика временно недоступна.");
+        } catch(Exception ex) { view.put("attritionError","Кадровая аналитика временно недоступна."); }
         return view;
     }
 }
