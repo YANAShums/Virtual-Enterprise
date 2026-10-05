@@ -30,4 +30,8 @@ public class WorkloadDailySnapshot {
         this.loadPercent=loadPercent; this.projectedLoadPercent=loadPercent; this.statusCode=statusCode;
         this.taskCount=taskCount; this.calculatedAt=LocalDateTime.now();
     }
+
+    public LocalDate getWorkDate() { return workDate; }
+    public BigDecimal getLoadPercent() { return loadPercent; }
+    public String getStatusCode() { return statusCode; }
 }

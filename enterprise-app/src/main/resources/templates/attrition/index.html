@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Прогнозы текучести')}"></head>
+<body><div th:replace="~{fragments/layout :: navbar}"></div>
+<main id="mainContent" class="container-fluid attrition-page">
+    <div class="page-heading attrition-heading">
+        <div><p class="eyebrow">КАДРОВАЯ АНАЛИТИКА</p><h1>Прогнозы текучести</h1>
+            <p class="page-subtitle">Вероятность ухода на горизонте 90 дней по сохранённым прогнозам.</p></div>
+        <form sec:authorize="hasAnyRole('ADMIN','ENTERPRISE_MANAGER')" th:action="@{/attrition/recalculate}" method="post">
+            <button class="btn btn-primary"><i data-lucide="refresh-cw" aria-hidden="true"></i>Пересчитать прогнозы</button>
+        </form>
+    </div>
+    <div th:if="${recalculation != null}" class="alert" th:classappend="${recalculation.failed == 0 ? 'alert-success' : 'alert-warning'}" role="status">
+        Пересчёт завершён: <strong th:text="${recalculation.succeeded}"></strong> успешно,
+        <strong th:text="${recalculation.failed}"></strong> с ошибкой.
+    </div>
+
+    <form class="filter-panel attrition-filters" method="get" th:action="@{/attrition}">
+        <label><span>Период с</span><input class="form-control" type="date" name="from" th:value="${overview.filter.from}"></label>
+        <label><span>По</span><input class="form-control" type="date" name="to" th:value="${overview.filter.to}"></label>
+        <label><span>Подразделение</span><select class="form-select" name="departmentId"><option value="">Все доступные</option><option th:each="item:${overview.departments}" th:value="${item.id}" th:selected="${item.id == overview.filter.departmentId}" th:text="${item.name}"></option></select></label>
+        <label><span>Должность</span><select class="form-select" name="positionId"><option value="">Все</option><option th:each="item:${overview.positions}" th:value="${item.id}" th:selected="${item.id == overview.filter.positionId}" th:text="${item.name}"></option></select></label>
+        <label><span>Проект</span><select class="form-select" name="projectId"><option value="">Все</option><option th:each="item:${overview.projects}" th:value="${item.id}" th:selected="${item.id == overview.filter.projectId}" th:text="${item.name}"></option></select></label>
+        <label><span>Риск</span><select class="form-select" name="riskLevel"><option value="">Все уровни</option><option th:each="level:${T(java.util.List).of('LOW','MEDIUM','HIGH','CRITICAL')}" th:value="${level}" th:selected="${level == overview.filter.riskLevel}" th:text="${level}"></option></select></label>
+        <label><span>Вероятность от</span><input class="form-control" type="number" min="0" max="1" step="0.01" name="minProbability" th:value="${overview.filter.minProbability}" placeholder="0"></label>
+        <label><span>До</span><input class="form-control" type="number" min="0" max="1" step="0.01" name="maxProbability" th:value="${overview.filter.maxProbability}" placeholder="1"></label>
+        <div class="filter-actions"><button class="btn btn-primary">Применить</button><a class="btn btn-outline-secondary" th:href="@{/attrition}">Сбросить</a></div>
+    </form>
+
+    <section class="attrition-kpis" aria-label="Ключевые показатели риска">
+        <article class="risk-kpi risk-high"><span class="kpi-symbol"><i data-lucide="triangle-alert" aria-hidden="true"></i></span><div><span>Высокий риск</span><strong th:text="${overview.highCount}"></strong><small>сотрудников с уровнем HIGH</small></div></article>
+        <article class="risk-kpi risk-critical"><span class="kpi-symbol"><i data-lucide="shield-alert" aria-hidden="true"></i></span><div><span>Критический риск</span><strong th:text="${overview.criticalCount}"></strong><small>сотрудников с уровнем CRITICAL</small></div></article>
+        <article class="risk-kpi"><span class="kpi-symbol"><i data-lucide="gauge" aria-hidden="true"></i></span><div><span>Средняя вероятность</span><strong th:text="${overview.averageProbability != null ? #numbers.formatDecimal(overview.averageProbability*100,1,1)+'%' : '—'}"></strong><small>по текущей выборке</small></div></article>
+        <article class="risk-kpi"><span class="kpi-symbol"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i></span><div><span>К предыдущему срезу</span><strong th:text="${overview.changePoints != null ? (overview.changePoints > 0 ? '+' : '')+#numbers.formatDecimal(overview.changePoints,1,1)+' п.п.' : '—'}"></strong><small>изменение средней вероятности</small></div></article>
+    </section>
+
+    <section class="attrition-charts">
+        <article class="widget risk-distribution"><div class="widget-heading"><div><span class="widget-icon"><i data-lucide="chart-pie" aria-hidden="true"></i></span><div><h2>Распределение риска</h2><p class="section-note">Последний прогноз каждого сотрудника</p></div></div></div>
+            <div class="donut-layout"><div class="risk-donut" th:style="${overview.donutStyle}" role="img" th:aria-label="${'Всего прогнозов: '+#lists.size(overview.rows)}"><span><strong th:text="${#lists.size(overview.rows)}"></strong><small>прогнозов</small></span></div>
+                <dl class="risk-legend"><div th:each="level:${T(java.util.List).of('LOW','MEDIUM','HIGH','CRITICAL')}"><dt><span th:class="${'risk-dot risk-'+#strings.toLowerCase(level)}"></span><span th:text="${level}"></span></dt><dd th:text="${overview.distribution[level]}"></dd></div></dl></div>
+        </article>
+        <article class="widget risk-trend"><div class="widget-heading"><div><span class="widget-icon"><i data-lucide="chart-spline" aria-hidden="true"></i></span><div><h2>Динамика средней вероятности</h2><p class="section-note" th:text="${#temporals.format(overview.filter.from,'dd.MM.yyyy')+' — '+#temporals.format(overview.filter.to,'dd.MM.yyyy')}"></p></div></div></div>
+            <div th:if="${!#lists.isEmpty(overview.trend)}" class="line-chart">
+                <svg viewBox="0 0 600 190" role="img" aria-label="График средней вероятности ухода"><line x1="24" y1="166" x2="576" y2="166"></line><line x1="24" y1="95" x2="576" y2="95"></line><line x1="24" y1="24" x2="576" y2="24"></line><polyline th:attr="points=${overview.trendPolyline}"></polyline><g th:each="point:${overview.trend}"><circle th:attr="cx=${point.x},cy=${point.y}" r="5"><title th:text="${#temporals.format(point.date,'dd.MM.yyyy')+': '+point.probabilityPercent+'%'}"></title></circle></g></svg>
+                <div class="chart-range"><span th:text="${#temporals.format(overview.trend[0].date,'dd.MM')}"></span><span th:text="${#temporals.format(overview.trend[#lists.size(overview.trend)-1].date,'dd.MM')}"></span></div>
+            </div><div th:if="${#lists.isEmpty(overview.trend)}" class="empty-state compact"><i data-lucide="chart-spline" aria-hidden="true"></i><p>Для выбранного периода ещё нет истории прогнозов.</p></div>
+        </article>
+    </section>
+
+    <section class="widget attrition-table-card"><div class="widget-heading"><div><span class="widget-icon"><i data-lucide="users-round" aria-hidden="true"></i></span><div><h2>Сотрудники</h2><p class="section-note">Риск, загрузка и объясняющие факторы</p></div></div><span class="badge-soft" th:text="${#lists.size(overview.rows)+' записей'}"></span></div>
+        <div class="table-responsive" th:if="${!#lists.isEmpty(overview.rows)}"><table class="table attrition-table"><thead><tr><th>Сотрудник</th><th>Подразделение</th><th>Загрузка</th><th>Вероятность</th><th>Риск</th><th>Основные факторы</th><th>Расчёт</th></tr></thead><tbody>
+            <tr th:each="row:${overview.rows}"><td><a class="employee-cell" th:href="@{/employees/{id}(id=${row.employeeId})}"><span class="avatar" th:text="${#strings.substring(row.employeeName,0,1)}"></span><span><strong th:text="${row.employeeName}"></strong><small th:text="${row.positionName}"></small></span></a></td><td th:text="${row.departmentName}"></td><td><strong th:text="${row.workloadPercent != null ? row.workloadPercent+'%' : '—'}"></strong><small class="d-block text-secondary" th:text="${row.workloadPercent != null ? row.workloadStatus : 'нет данных'}"></small></td><td><strong th:text="${row.probabilityPercent+'%'}"></strong></td><td><span th:class="${'risk-badge risk-'+#strings.toLowerCase(row.riskLevel)}" th:text="${row.riskLevel}"></span></td><td><ul class="factor-compact"><li th:each="factor,stat:${row.factors}" th:if="${stat.index < 2}"><i th:attr="data-lucide=${factor.direction == 'UP' ? 'trending-up' : 'trending-down'}" aria-hidden="true"></i><span th:text="${factor.displayText}"></span></li></ul><span th:if="${#lists.isEmpty(row.factors)}" class="text-secondary">Нет факторов</span></td><td><time th:text="${#temporals.format(row.calculatedAt,'dd.MM.yyyy HH:mm')}"></time><span th:if="${row.stale}" class="stale-label">Устарел</span><small class="d-block text-secondary" th:text="${row.modelVersion}"></small></td></tr>
+        </tbody></table></div>
+        <div th:if="${#lists.isEmpty(overview.rows)}" class="empty-state"><span class="empty-icon"><i data-lucide="shield-question" aria-hidden="true"></i></span><h3>Прогнозов пока нет</h3><p>Измените фильтры или выполните пересчёт после обучения модели.</p></div>
+    </section>
+    <p class="decision-note"><i data-lucide="info" aria-hidden="true"></i>Прогноз носит рекомендательный характер и не является основанием для автоматического кадрового решения.</p>
+</main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>

@@ -3,6 +3,8 @@ package com.virtualenterprise.app.integration;
 import com.virtualenterprise.contracts.workload.WorkloadEvaluationRequest;
 import com.virtualenterprise.contracts.workload.WorkloadEvaluationResponse;
 import com.virtualenterprise.contracts.workload.WorkloadFeatureSummary;
+import com.virtualenterprise.contracts.workload.WorkloadHistoryPoint;
+import java.util.List;
 import java.time.LocalDate;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -16,6 +18,13 @@ public class WorkloadClient {
         return client.get().uri(uri -> uri.path("/internal/v1/workload/features/{employeeId}")
                         .queryParam("snapshotDate",snapshotDate).build(employeeId))
                 .retrieve().body(WorkloadFeatureSummary.class);
+    }
+
+    public List<WorkloadHistoryPoint> history(Long employeeId, LocalDate from, LocalDate to) {
+        WorkloadHistoryPoint[] result = client.get().uri(uri -> uri.path("/internal/v1/workload/history/{employeeId}")
+                        .queryParam("from", from).queryParam("to", to).build(employeeId))
+                .retrieve().body(WorkloadHistoryPoint[].class);
+        return result == null ? List.of() : List.of(result);
     }
 
     public WorkloadEvaluationResponse evaluate(WorkloadEvaluationRequest request) {

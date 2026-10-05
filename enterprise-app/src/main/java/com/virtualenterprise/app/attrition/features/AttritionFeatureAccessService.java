@@ -35,6 +35,20 @@ public class AttritionFeatureAccessService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public Long visibleDepartmentId() {
+        AppUser user = currentUsers.requireCurrentUser();
+        if (hasRole(user, "ADMIN") || hasRole(user, "ENTERPRISE_MANAGER")) {
+            return null;
+        }
+        if (!hasRole(user, "DEPARTMENT_MANAGER")) {
+            throw forbidden("Нет доступа к кадровым прогнозам");
+        }
+        return employees.findByUserId(user.getId())
+                .map(employee -> employee.getDepartment().getId())
+                .orElseThrow(() -> forbidden("Для пользователя не найден профиль сотрудника"));
+    }
+
     private boolean hasRole(AppUser user, String code) {
         return user.getRoles().stream().anyMatch(role -> code.equals(role.getCode()));
     }

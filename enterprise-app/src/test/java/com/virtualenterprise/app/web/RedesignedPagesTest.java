@@ -28,6 +28,7 @@ class RedesignedPagesTest {
     @MockitoBean ProjectViewService projects;
     @MockitoBean AdminViewService admin;
     @MockitoBean OverviewViewService overview;
+    @MockitoBean AttritionAnalyticsService attritionAnalytics;
     @MockitoBean TaskViewService taskViews;
     @MockitoBean ProjectManagementService projectManagement;
     @MockitoBean com.virtualenterprise.app.repository.EmployeeRepository employeeRepository;

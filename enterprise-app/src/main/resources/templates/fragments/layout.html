@@ -20,6 +20,7 @@
    <a th:href="@{/kanban}" title="Доски" aria-label="Доски"><i data-lucide="columns-3" class="" aria-hidden="true"></i><span class="nav-label">Доски</span></a>
    <a th:href="@{/employees}" title="Сотрудники" aria-label="Сотрудники"><i data-lucide="users" class="" aria-hidden="true"></i><span class="nav-label">Команда</span></a>
    <a th:href="@{/workload}" title="Загруженность" aria-label="Загруженность"><i data-lucide="chart-no-axes-combined" class="" aria-hidden="true"></i><span class="nav-label">Аналитика</span></a>
+   <a sec:authorize="hasAnyRole('ADMIN','ENTERPRISE_MANAGER','DEPARTMENT_MANAGER')" th:href="@{/attrition}" title="Прогнозы текучести" aria-label="Прогнозы текучести"><i data-lucide="shield-check" aria-hidden="true"></i><span class="nav-label">Текучесть</span></a>
   </nav>
   <nav class="app-nav admin-nav" sec:authorize="hasRole('ADMIN')" aria-label="Управление"><a th:href="@{/admin}" title="Администрирование" aria-label="Администрирование"><i data-lucide="settings" class="" aria-hidden="true"></i><span class="nav-label">Администрирование</span></a></nav>
   <div class="sidebar-footer"><span class="avatar"><i data-lucide="user-round" class="" aria-hidden="true"></i></span><div class="profile-copy"><strong sec:authentication="name"></strong><div class="small text-secondary">FlowStaff AI</div></div></div>

@@ -91,6 +91,11 @@ public class WorkloadContextService {
         return client.evaluate(new WorkloadEvaluationRequest(enterpriseId, null, start, end, BigDecimal.ZERO, contexts));
     }
 
+    @Transactional(readOnly = true)
+    public List<WorkloadHistoryPoint> history(Long employeeId, LocalDate from, LocalDate to) {
+        return client.history(employeeId, from, to);
+    }
+
     private CandidateContext toContext(Employee e, boolean projectMember, LocalDate start, LocalDate end, Set<Long> requiredSkills, Long excludedTaskId) {
         Map<Integer, BigDecimal> schedule = new HashMap<>();
         for (WorkScheduleDay day : e.getWorkSchedule().getDays()) {

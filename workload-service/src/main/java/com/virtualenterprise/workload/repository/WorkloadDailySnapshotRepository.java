@@ -4,6 +4,7 @@ import com.virtualenterprise.workload.domain.WorkloadDailySnapshot;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,4 +19,7 @@ public interface WorkloadDailySnapshotRepository extends JpaRepository<WorkloadD
             """,nativeQuery=true)
     WorkloadFeatureAggregate summarize(@Param("employeeId") Long employeeId,
                                        @Param("start") LocalDate start,@Param("end") LocalDate end);
+
+    List<WorkloadDailySnapshot> findByEmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+            Long employeeId, LocalDate start, LocalDate end);
 }
