@@ -21,8 +21,9 @@ class EmployeeManagementServiceTest {
     private final WorkScheduleRepository schedules=mock(WorkScheduleRepository.class);
     private final EmployeeAssignmentHistoryRepository assignments=mock(EmployeeAssignmentHistoryRepository.class);
     private final EmployeeStatusHistoryRepository statuses=mock(EmployeeStatusHistoryRepository.class);
+    private final AuditTrailService audit=mock(AuditTrailService.class);
     private final EmployeeManagementService service=new EmployeeManagementService(
-            employees,enterprises,departments,positions,schedules,assignments,statuses);
+            employees,enterprises,departments,positions,schedules,assignments,statuses,audit);
 
     private Enterprise enterprise;
     private Department department;
@@ -51,6 +52,7 @@ class EmployeeManagementServiceTest {
         verify(statuses).save(argThat(item -> item.getEmployee()==created
                 && item.getPreviousStatus()==null && "ACTIVE".equals(item.getNewStatus())
                 && item.getEffectiveDate().equals(LocalDate.of(2024,1,10))));
+        verify(audit).record(eq("EMPLOYEE_CREATED"),eq("EMPLOYEE"),isNull(),isNull(),any());
     }
 
     @Test
@@ -79,6 +81,7 @@ class EmployeeManagementServiceTest {
         verify(statuses).save(argThat(item -> "ACTIVE".equals(item.getPreviousStatus())
                 && "DISMISSED".equals(item.getNewStatus())
                 && item.getTerminationDate().equals(LocalDate.now())));
+        verify(audit).record(eq("EMPLOYEE_UPDATED"),eq("EMPLOYEE"),eq(10L),any(),any());
     }
 
     @Test

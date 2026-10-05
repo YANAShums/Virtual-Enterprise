@@ -6,8 +6,8 @@ spring:
     name: workload-service
   datasource:
     url: ${WORKLOAD_DB_URL:jdbc:mysql://localhost:3307/enterprise_workload?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    username: ${DB_USERNAME:virtual_app}
-    password: ${DB_PASSWORD:virtual_app_password}
+    username: ${DB_USERNAME:workload_app}
+    password: ${DB_PASSWORD:workload_app_password}
   jpa:
     open-in-view: false
     hibernate:

@@ -12,8 +12,8 @@ spring:
     name: enterprise-app
   datasource:
     url: ${CORE_DB_URL:jdbc:mysql://localhost:3307/enterprise_core?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    username: ${DB_USERNAME:virtual_app}
-    password: ${DB_PASSWORD:virtual_app_password}
+    username: ${DB_USERNAME:core_app}
+    password: ${DB_PASSWORD:core_app_password}
   jpa:
     open-in-view: true
     hibernate:

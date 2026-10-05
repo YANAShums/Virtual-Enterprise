@@ -17,7 +17,8 @@ class EmployeeProfileAdminServiceTest {
     private final EnterpriseRepository enterprises=mock(EnterpriseRepository.class);
     private final SkillRepository skills=mock(SkillRepository.class);
     private final EmployeeSkillRepository employeeSkills=mock(EmployeeSkillRepository.class);
-    private final EmployeeProfileAdminService service=new EmployeeProfileAdminService(employees,absences,enterprises,skills,employeeSkills);
+    private final AuditTrailService audit=mock(AuditTrailService.class);
+    private final EmployeeProfileAdminService service=new EmployeeProfileAdminService(employees,absences,enterprises,skills,employeeSkills,audit);
 
     @Test
     void approvedAbsenceIsStoredWhenPeriodDoesNotOverlap(){
@@ -27,6 +28,7 @@ class EmployeeProfileAdminServiceTest {
         EmployeeAbsenceForm form=absenceForm();
         service.saveAbsence(7L,null,form);
         verify(absences).saveAndFlush(argThat(item -> item.getEmployee()==employee&&"APPROVED".equals(item.getStatus())));
+        verify(audit).record(eq("EMPLOYEE_ABSENCE_CREATED"),eq("EMPLOYEE_ABSENCE"),isNull(),isNull(),any());
     }
 
     @Test

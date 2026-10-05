@@ -5,8 +5,14 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
-      DB_USERNAME: ${DB_USERNAME:-virtual_app}
-      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      CORE_DB_USERNAME: ${CORE_DB_USERNAME:-core_app}
+      CORE_DB_PASSWORD: ${CORE_DB_PASSWORD:-core_app_password}
+      WORKLOAD_DB_USERNAME: ${WORKLOAD_DB_USERNAME:-workload_app}
+      WORKLOAD_DB_PASSWORD: ${WORKLOAD_DB_PASSWORD:-workload_app_password}
+      ML_DB_USERNAME: ${ML_DB_USERNAME:-ml_app}
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:-ml_app_password}
+      BACKUP_DB_USERNAME: ${BACKUP_DB_USERNAME:-backup_app}
+      BACKUP_DB_PASSWORD: ${BACKUP_DB_PASSWORD:-backup_app_password}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -32,12 +38,12 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       WORKLOAD_DB_URL: jdbc:mysql://mysql:3306/enterprise_workload?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
-      DB_USERNAME: ${DB_USERNAME:-virtual_app}
-      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      DB_USERNAME: ${WORKLOAD_DB_USERNAME:-workload_app}
+      DB_PASSWORD: ${WORKLOAD_DB_PASSWORD:-workload_app_password}
       WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:-change-me-internal-token}
     depends_on:
-      mysql:
-        condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "bash", "/app/healthcheck.sh", "8081"]
       interval: 10s
@@ -55,8 +61,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CORE_DB_URL: jdbc:mysql://mysql:3306/enterprise_core?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
-      DB_USERNAME: ${DB_USERNAME:-virtual_app}
-      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      DB_USERNAME: ${CORE_DB_USERNAME:-core_app}
+      DB_PASSWORD: ${CORE_DB_PASSWORD:-core_app_password}
       WORKLOAD_SERVICE_URL: http://workload-service:8081
       WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:-change-me-internal-token}
       ML_SERVICE_URL: http://attrition-ml-service:8082
@@ -95,8 +101,15 @@ services:
     environment:
       MYSQL_HOST: mysql
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
-      DB_USERNAME: ${DB_USERNAME:-virtual_app}
-    entrypoint: ["bash", "/bootstrap/02-create-ml-database.sh"]
+      CORE_DB_USERNAME: ${CORE_DB_USERNAME:-core_app}
+      CORE_DB_PASSWORD: ${CORE_DB_PASSWORD:-core_app_password}
+      WORKLOAD_DB_USERNAME: ${WORKLOAD_DB_USERNAME:-workload_app}
+      WORKLOAD_DB_PASSWORD: ${WORKLOAD_DB_PASSWORD:-workload_app_password}
+      ML_DB_USERNAME: ${ML_DB_USERNAME:-ml_app}
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:-ml_app_password}
+      BACKUP_DB_USERNAME: ${BACKUP_DB_USERNAME:-backup_app}
+      BACKUP_DB_PASSWORD: ${BACKUP_DB_PASSWORD:-backup_app_password}
+    entrypoint: ["bash", "/bootstrap/03-ensure-service-accounts.sh"]
     volumes:
       - ./mysql-init:/bootstrap:ro
     depends_on:
@@ -111,8 +124,8 @@ services:
       dockerfile: attrition-ml-service/db/Dockerfile
     environment:
       LIQUIBASE_COMMAND_URL: jdbc:mysql://mysql:3306/enterprise_ml?allowPublicKeyRetrieval=true&useSSL=false
-      LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME:-virtual_app}
-      LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      LIQUIBASE_COMMAND_USERNAME: ${ML_DB_USERNAME:-ml_app}
+      LIQUIBASE_COMMAND_PASSWORD: ${ML_DB_PASSWORD:-ml_app_password}
       LIQUIBASE_COMMAND_CHANGELOG_FILE: changelog.xml
     volumes:
       - ./attrition-ml-service/db:/liquibase/changelog:ro
@@ -131,8 +144,8 @@ services:
     environment:
       ML_DB_HOST: mysql
       ML_DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:-virtual_app}
-      DB_PASSWORD: ${DB_PASSWORD:-virtual_app_password}
+      DB_USERNAME: ${ML_DB_USERNAME:-ml_app}
+      DB_PASSWORD: ${ML_DB_PASSWORD:-ml_app_password}
       ML_SERVICE_TOKEN: ${ML_SERVICE_TOKEN:-change-me-ml-token}
       ML_FEATURE_TIME_ZONE: ${ML_FEATURE_TIME_ZONE:-Europe/Minsk}
       ML_IMPORT_MAX_BYTES: ${ML_IMPORT_MAX_BYTES:-5242880}
@@ -149,6 +162,50 @@ services:
     depends_on:
       ml-migrations:
         condition: service_completed_successfully
+    networks: [backend]
+
+  backup:
+    build:
+      context: .
+      dockerfile: ops/backup/Dockerfile
+    profiles: ["ops"]
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${BACKUP_DB_USERNAME:-backup_app}
+      MYSQL_PASSWORD: ${BACKUP_DB_PASSWORD:-backup_app_password}
+      BACKUP_ROOT: /backups
+      BACKUP_RETENTION_COUNT: ${BACKUP_RETENTION_COUNT:-7}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      MODEL_STORAGE_PATH: /data/models
+    volumes:
+      - ${BACKUP_DIRECTORY:-./backups}:/backups
+      - model_storage:/data/models:ro
+    depends_on:
+      db-bootstrap:
+        condition: service_completed_successfully
+    networks: [backend]
+
+  restore:
+    build:
+      context: .
+      dockerfile: ops/backup/Dockerfile
+    profiles: ["restore"]
+    entrypoint: ["/opt/flowstaff/restore.sh"]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
+      BACKUP_ROOT: /backups
+      BACKUP_ID: ${BACKUP_ID:-latest}
+      RESTORE_CONFIRM: ${RESTORE_CONFIRM:-}
+      MODEL_STORAGE_PATH: /data/models
+    volumes:
+      - ${BACKUP_DIRECTORY:-./backups}:/backups:ro
+      - model_storage:/data/models
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks: [backend]
 
 volumes:

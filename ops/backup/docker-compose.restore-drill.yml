@@ -1,0 +1,33 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: restore_drill_password
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -P 3306 -uroot --protocol=tcp --silent']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  restore:
+    build:
+      context: ../..
+      dockerfile: ops/backup/Dockerfile
+    entrypoint: ["/opt/flowstaff/restore.sh"]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: restore_drill_password
+      BACKUP_ROOT: /backups
+      BACKUP_ID: ${BACKUP_ID:-latest}
+      RESTORE_CONFIRM: RESTORE
+      MODEL_STORAGE_PATH: /restore/models
+    volumes:
+      - ${BACKUP_DIRECTORY:-../../backups}:/backups:ro
+    tmpfs:
+      - /restore/models
+    depends_on:
+      mysql:
+        condition: service_healthy

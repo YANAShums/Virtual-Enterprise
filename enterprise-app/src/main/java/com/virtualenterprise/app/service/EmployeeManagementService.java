@@ -23,13 +23,15 @@ public class EmployeeManagementService {
     private final WorkScheduleRepository schedules;
     private final EmployeeAssignmentHistoryRepository assignments;
     private final EmployeeStatusHistoryRepository statuses;
+    private final AuditTrailService audit;
 
     public EmployeeManagementService(EmployeeRepository employees, EnterpriseRepository enterprises,
                                      DepartmentRepository departments, PositionRepository positions,
                                      WorkScheduleRepository schedules, EmployeeAssignmentHistoryRepository assignments,
-                                     EmployeeStatusHistoryRepository statuses) {
+                                     EmployeeStatusHistoryRepository statuses, AuditTrailService audit) {
         this.employees=employees; this.enterprises=enterprises; this.departments=departments;
         this.positions=positions; this.schedules=schedules; this.assignments=assignments; this.statuses=statuses;
+        this.audit=audit;
     }
 
     @Transactional(readOnly = true)
@@ -61,10 +63,11 @@ public class EmployeeManagementService {
         e.setManager(manager); copyCommon(e,f); e.setTimezone(enterprise.getTimezone());
         e.setStatus("ACTIVE"); e.setTerminationDate(null); e.setTerminationReason(null); e.setActive(true);
         try {
-            employees.saveAndFlush(e);
+            Employee saved=employees.saveAndFlush(e);
             assignments.save(assignment(e,department,position,f.getHireDate(),"Приём на работу"));
             statuses.save(status(e,null,"ACTIVE",f.getHireDate(),null,"Приём на работу"));
-            return e;
+            audit.record("EMPLOYEE_CREATED","EMPLOYEE",saved.getId(),null,employeeSnapshot(saved));
+            return saved;
         } catch(DataIntegrityViolationException ex) {
             throw new AppException(HttpStatus.CONFLICT,"DUPLICATE_EMPLOYEE","Табельный номер уже используется");
         }
@@ -74,6 +77,7 @@ public class EmployeeManagementService {
         enterprises.lockOrganization().orElseThrow(AdminRules::missing);
         Employee e=employees.findById(id).orElseThrow(AdminRules::missing);
         AdminRules.version(e.getVersion(),f.getVersion());
+        Map<String,Object> before=employeeSnapshot(e);
         validateEffectiveDate(f.getChangeEffectiveDate(),f.getHireDate());
 
         Department department=departments.findById(f.getDepartmentId()).orElseThrow(AdminRules::missing);
@@ -113,7 +117,11 @@ public class EmployeeManagementService {
         } else {
             e.setTerminationDate(null); e.setTerminationReason(null);
         }
-        try { return employees.saveAndFlush(e); }
+        try {
+            Employee saved=employees.saveAndFlush(e);
+            audit.record("EMPLOYEE_UPDATED","EMPLOYEE",saved.getId(),before,employeeSnapshot(saved));
+            return saved;
+        }
         catch(DataIntegrityViolationException ex) {
             throw new AppException(HttpStatus.CONFLICT,"DUPLICATE_EMPLOYEE","Табельный номер уже используется");
         }
@@ -209,4 +217,16 @@ public class EmployeeManagementService {
     }
 
     private String blankToNull(String value) { return value==null || value.isBlank()?null:value.trim(); }
+
+    private Map<String,Object> employeeSnapshot(Employee employee) {
+        Map<String,Object> values=new LinkedHashMap<>();
+        values.put("personnelNumber",employee.getPersonnelNumber());
+        values.put("departmentId",employee.getDepartment()==null?null:employee.getDepartment().getId());
+        values.put("positionId",employee.getPosition()==null?null:employee.getPosition().getId());
+        values.put("managerId",employee.getManager()==null?null:employee.getManager().getId());
+        values.put("employmentRate",employee.getEmploymentRate());
+        values.put("status",employee.getStatus());
+        values.put("terminationDate",employee.getTerminationDate());
+        return values;
+    }
 }

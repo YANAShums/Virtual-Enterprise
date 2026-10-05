@@ -1,6 +1,7 @@
 package com.virtualenterprise.app.service.admin;
 import com.virtualenterprise.app.domain.*;
 import com.virtualenterprise.app.repository.*;
+import com.virtualenterprise.app.service.AuditTrailService;
 import com.virtualenterprise.app.web.dto.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +15,8 @@ public class UserAdminService {
     private final EmployeeRepository employees;
     private final AdminRules rules;
     private final org.springframework.security.crypto.password.PasswordEncoder encoder;
-    public UserAdminService(AppUserRepository users, RoleRepository roles, EmployeeRepository employees, AdminRules rules, org.springframework.security.crypto.password.PasswordEncoder encoder) { this.users=users;this.roles=roles;this.employees=employees;this.rules=rules;this.encoder=encoder; }
+    private final AuditTrailService audit;
+    public UserAdminService(AppUserRepository users, RoleRepository roles, EmployeeRepository employees, AdminRules rules, org.springframework.security.crypto.password.PasswordEncoder encoder, AuditTrailService audit) { this.users=users;this.roles=roles;this.employees=employees;this.rules=rules;this.encoder=encoder;this.audit=audit; }
 
     public UserAdminForm form(Long id) {
         UserAdminForm f=new UserAdminForm();
@@ -25,6 +27,7 @@ public class UserAdminService {
     }
     public Long save(Long id,UserAdminForm f) {
         rules.lock();AppUser e=id==null?new AppUser():users.findById(id).orElseThrow(AdminRules::missing);
+        Map<String,Object> before=id==null?null:userSnapshot(e,null);
         if(id!=null) version(e.getVersion(),f.getVersion());
         Set<Role> selected=new LinkedHashSet<>(roles.findAllById(f.getRoleIds()));
         check(selected.size()==f.getRoleIds().size() && !selected.isEmpty() && selected.stream().allMatch(Role::isActive),"Выберите действующие роли");
@@ -46,6 +49,7 @@ public class UserAdminService {
         users.saveAndFlush(e);
         if(id!=null) employees.findByUserId(id).filter(old -> linked==null || !old.getId().equals(linked.getId())).ifPresent(old -> {old.setUser(null);employees.flush();});
         if(linked!=null) linked.setUser(e);
+        audit.record(id==null?"USER_CREATED":"USER_UPDATED","USER",e.getId(),before,userSnapshot(e,linked));
         return e.getId();
     }
     public void delete(Long id,Long submittedVersion) {
@@ -53,5 +57,11 @@ public class UserAdminService {
     }
     private boolean isAdmin(AppUser e) {
         return e.isActive() && "ACTIVE".equals(e.getStatus()) && e.getRoles().stream().anyMatch(r -> r.isActive() && "ADMIN".equals(r.getCode()));
+    }
+    private Map<String,Object> userSnapshot(AppUser user,Employee linked) {
+        Map<String,Object> values=new LinkedHashMap<>();values.put("username",user.getUsername());
+        values.put("email",user.getEmail());values.put("status",user.getStatus());
+        values.put("roles",user.getRoles().stream().map(Role::getCode).sorted().toList());
+        values.put("employeeId",linked==null?null:linked.getId());return values;
     }
 }
