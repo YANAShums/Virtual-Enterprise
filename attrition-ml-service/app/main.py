@@ -62,8 +62,10 @@ class FeatureSnapshot(BaseModel):
     overdueTasks30d: int = Field(ge=0)
     completedTasks90d: int = Field(ge=0)
     avgTaskDelayDays90d: Decimal
-    avgWorkload30d: Decimal = Field(ge=0)
-    avgWorkload90d: Decimal = Field(ge=0)
+    avgWorkload30d: Decimal | None = Field(default=None, ge=0)
+    avgWorkload90d: Decimal | None = Field(default=None, ge=0)
+    workloadDaysAvailable30d: int | None = Field(default=None, ge=0, le=30)
+    workloadDaysAvailable90d: int | None = Field(default=None, ge=0, le=90)
     overloadDays30d: int = Field(ge=0)
     overloadDays90d: int = Field(ge=0)
     absenceDays90d: int = Field(ge=0)
@@ -95,6 +97,8 @@ class PredictionFeatures(BaseModel):
     avgTaskDelayDays90d: Decimal | None = None
     avgWorkload30d: Decimal | None = Field(default=None, ge=0)
     avgWorkload90d: Decimal | None = Field(default=None, ge=0)
+    workloadDaysAvailable30d: int | None = Field(default=None, ge=0, le=30)
+    workloadDaysAvailable90d: int | None = Field(default=None, ge=0, le=90)
     overloadDays30d: int | None = Field(default=None, ge=0)
     overloadDays90d: int | None = Field(default=None, ge=0)
     absenceDays90d: int | None = Field(default=None, ge=0)
@@ -108,6 +112,8 @@ class BatchPredictionRequest(BaseModel):
 
 
 _PREDICTION_FIELDS = {
+    "workload_days_available_30d": "workloadDaysAvailable30d",
+    "workload_days_available_90d": "workloadDaysAvailable90d",
     "tenure_months": "tenureMonths", "employment_rate": "employmentRate",
     "department_code": "departmentCode", "position_code": "positionCode",
     "active_projects_count": "activeProjectsCount", "active_tasks_count": "activeTasksCount",

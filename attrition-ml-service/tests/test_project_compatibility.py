@@ -41,9 +41,18 @@ def test_service_token_accepted_and_wrong_token_rejected(api):
 
 def test_snapshot_is_idempotent_by_employee_and_date_not_only_id(api):
     assert api.post("/snapshots", json={"snapshots": [snap(sid="first")]}).json()["created"] == 1
-    assert api.post("/snapshots", json={"snapshots": [snap(sid="second")]}).json()["updated"] == 1
+    assert api.post("/snapshots", json={"snapshots": [snap(sid="second")]}).json()["skipped_frozen"] == 1
     with api.app.state.session_factory() as session:
         assert len(session.scalars(select(FeatureSnapshot)).all()) == 1
+
+
+def test_unlabeled_operational_snapshot_is_also_frozen(api):
+    initial=snap(); initial['features']['avg_workload_30d']=None
+    api.post('/snapshots',json={'snapshots':[initial]})
+    changed=snap(); changed['features']['avg_workload_30d']=110
+    assert api.post('/snapshots',json={'snapshots':[changed]}).json()['skipped_frozen']==1
+    with api.app.state.session_factory() as session:
+        assert session.scalars(select(FeatureSnapshot)).one().features['avg_workload_30d'] is None
 
 
 def test_snapshot_id_cannot_be_reassigned_to_another_employee(api):

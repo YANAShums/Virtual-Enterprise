@@ -22,20 +22,20 @@ public class WorkloadController {
     private final WorkloadCalculationService service;
     private final WorkloadSnapshotService snapshots;
     private final WorkloadDailySnapshotRepository dailySnapshots;
+    private final com.virtualenterprise.workload.calculation.WorkloadObservationService observations;
 
     public WorkloadController(WorkloadCalculationService service, WorkloadSnapshotService snapshots,
-                              WorkloadDailySnapshotRepository dailySnapshots) {
+                              WorkloadDailySnapshotRepository dailySnapshots,
+                              com.virtualenterprise.workload.calculation.WorkloadObservationService observations) {
         this.service = service;
         this.snapshots = snapshots;
         this.dailySnapshots = dailySnapshots;
+        this.observations = observations;
     }
 
     @GetMapping("/features/{employeeId}")
     public WorkloadFeatureSummary features(@PathVariable Long employeeId,@RequestParam LocalDate snapshotDate) {
-        WorkloadFeatureAggregate days30=dailySnapshots.summarize(employeeId,snapshotDate.minusDays(29),snapshotDate);
-        WorkloadFeatureAggregate days90=dailySnapshots.summarize(employeeId,snapshotDate.minusDays(89),snapshotDate);
-        return new WorkloadFeatureSummary(employeeId,snapshotDate,scale(days30.getAverageLoad()),
-                scale(days90.getAverageLoad()),days30.getOverloadDays().intValue(),days90.getOverloadDays().intValue());
+        return observations.features(employeeId,snapshotDate);
     }
 
     @GetMapping("/history/{employeeId}")

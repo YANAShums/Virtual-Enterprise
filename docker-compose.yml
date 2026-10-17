@@ -41,6 +41,7 @@ services:
       DB_USERNAME: ${WORKLOAD_DB_USERNAME:-workload_app}
       DB_PASSWORD: ${WORKLOAD_DB_PASSWORD:-workload_app_password}
       WORKLOAD_SERVICE_TOKEN: ${WORKLOAD_SERVICE_TOKEN:-change-me-internal-token}
+      WORKLOAD_FEATURE_TIME_ZONE: ${ML_FEATURE_TIME_ZONE:-Europe/Minsk}
     depends_on:
       db-bootstrap:
         condition: service_completed_successfully

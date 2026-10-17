@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Service
 public class FeatureBuilder {
-    public static final String SCHEMA_VERSION="attrition-features-v1";
+    public static final String SCHEMA_VERSION="attrition-features-v2";
     private final FeatureDataProvider data;
     private final Clock clock;
 
@@ -48,10 +48,12 @@ public class FeatureBuilder {
         return new AttritionFeatureSnapshot(id,employeeId,snapshotDate,tenure,scale(facts.employmentRate()),
                 facts.departmentCode(),facts.positionCode(),facts.activeProjectsCount(),facts.activeTasksCount(),
                 facts.overdueTasks30d(),facts.completedTasks90d(),scale(facts.avgTaskDelayDays90d()),
-                scale(facts.avgWorkload30d()),scale(facts.avgWorkload90d()),facts.overloadDays30d(),
+                optionalScale(facts.avgWorkload30d()),optionalScale(facts.avgWorkload90d()),facts.overloadDays30d(),
                 facts.overloadDays90d(),facts.absenceDays90d(),facts.taskReassignments90d(),
-                facts.projectChanges180d(),null,"OPERATIONAL",SCHEMA_VERSION,LocalDateTime.now(clock));
+                facts.projectChanges180d(),null,"OPERATIONAL",SCHEMA_VERSION,LocalDateTime.now(clock),facts.workloadDaysAvailable30d(),facts.workloadDaysAvailable90d());
     }
+
+    private BigDecimal optionalScale(BigDecimal value) { return value==null?null:scale(value); }
 
     private BigDecimal scale(BigDecimal value) {
         return (value==null?BigDecimal.ZERO:value).setScale(2,RoundingMode.HALF_UP);

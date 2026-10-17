@@ -36,7 +36,7 @@ def snapshot_id(employee_id: str, snap_date: date, schema_version: str = SCHEMA_
 def upsert_snapshots(session: Session, items: Iterable[dict[str, Any]], today: Optional[date] = None) -> dict[str, int]:
     """Операционные снимки без метки. Размеченные снимки не перезаписываются."""
     today = today or date.today()
-    res = {"created": 0, "updated": 0, "skipped_labeled": 0, "rejected_future": 0}
+    res = {"created": 0, "updated": 0, "skipped_labeled": 0, "skipped_frozen": 0, "rejected_future": 0}
     for it in items:
         d: date = it["snapshot_date"]
         if d > today:
@@ -59,6 +59,8 @@ def upsert_snapshots(session: Session, items: Iterable[dict[str, Any]], today: O
             res["created"] += 1
         elif row.label_status != lr.PENDING:
             res["skipped_labeled"] += 1
+        elif row.source == "OPERATIONAL":
+            res["skipped_frozen"] += 1
         else:
             row.features = feats
             res["updated"] += 1

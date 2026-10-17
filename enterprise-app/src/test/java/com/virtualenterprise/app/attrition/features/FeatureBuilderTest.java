@@ -51,6 +51,19 @@ class FeatureBuilderTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test void missingLoadIsDifferentFromObservedZero() {
+        FeatureFacts facts=new FeatureFacts(7L,LocalDate.of(2024,1,1),BigDecimal.ONE,"IT","DEV",
+                0,0,0,0,BigDecimal.ZERO,null,BigDecimal.ZERO,0,0,0,0,0,0,1);
+        var snapshot=new FeatureBuilder((id,date)->facts,clock).buildOperational(7L,snapshotDate);
+        assertThat(snapshot.avgWorkload30d()).isNull();
+        assertThat(snapshot.avgWorkload90d()).isEqualByComparingTo("0");
+        assertThat(snapshot.workloadDaysAvailable30d()).isZero();
+        assertThat(snapshot.workloadDaysAvailable90d()).isEqualTo(1);
+        var features=(java.util.Map<?,?>)OperationalSnapshotMapper.toV2(snapshot).get("features");
+        assertThat(features.get("avg_workload_30d")).isNull();
+        assertThat(features.get("workload_days_available_90d")).isEqualTo(1);
+    }
+
     @Test
     void schemaContainsNoTerminationOrProtectedCharacteristics() {
         assertThat(Arrays.stream(AttritionFeatureSnapshot.class.getRecordComponents())

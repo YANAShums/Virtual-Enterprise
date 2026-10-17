@@ -12,9 +12,11 @@ public class FeatureSnapshotService {
     private final EmployeeRepository employees;
     private final FeatureBuilder builder;
     private final AttritionMlClient ml;
+    private final com.virtualenterprise.app.integration.MlWorkflowClient workflow;
 
-    public FeatureSnapshotService(EmployeeRepository employees,FeatureBuilder builder,AttritionMlClient ml) {
-        this.employees=employees; this.builder=builder; this.ml=ml;
+    public FeatureSnapshotService(EmployeeRepository employees,FeatureBuilder builder,AttritionMlClient ml,
+                                   com.virtualenterprise.app.integration.MlWorkflowClient workflow) {
+        this.employees=employees; this.builder=builder; this.ml=ml; this.workflow=workflow;
     }
 
     public LocalDate currentDate() {
@@ -31,6 +33,7 @@ public class FeatureSnapshotService {
         List<AttritionFeatureSnapshot> snapshots=buildActive(snapshotDate);
         if(snapshots.isEmpty()) return new FeatureBatchResult(snapshotDate,0,0,0);
         AttritionMlClient.StoredFeatureBatch result=ml.store(snapshots);
+        workflow.snapshots(snapshots.stream().map(OperationalSnapshotMapper::toV2).toList());
         return new FeatureBatchResult(snapshotDate,snapshots.size(),result.stored(),result.updated());
     }
 

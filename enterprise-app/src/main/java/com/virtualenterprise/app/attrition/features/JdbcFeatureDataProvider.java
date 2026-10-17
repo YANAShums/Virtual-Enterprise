@@ -71,7 +71,7 @@ public class JdbcFeatureDataProvider implements FeatureDataProvider {
         return new FeatureFacts(employeeId,employee.getHireDate(),employee.getEmploymentRate(),
                 employee.getDepartment().getCode(),employee.getPosition().getCode(),projects,activeTasks,overdue,
                 completed,delay,load.averageLoad30Days(),load.averageLoad90Days(),load.overloadDays30(),
-                load.overloadDays90(),absenceDays,reassignments,projectChanges);
+                load.overloadDays90(),absenceDays,reassignments,projectChanges,load.workloadDaysAvailable30d(),load.workloadDaysAvailable90d());
     }
 
     private int number(String sql,Object... args) {

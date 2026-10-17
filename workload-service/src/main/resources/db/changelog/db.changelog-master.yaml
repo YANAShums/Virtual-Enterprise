@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/001-workload-schema.sql
   - include:
       file: db/changelog/002-workload-period-snapshots.sql
+  - include:
+      file: db/changelog/003-workload-observations.sql

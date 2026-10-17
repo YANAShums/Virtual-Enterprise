@@ -11,9 +11,11 @@ import java.math.BigDecimal;
 public class WorkloadSnapshotService {
     private final WorkloadDailySnapshotRepository dailyRepository;
     private final WorkloadSnapshotRepository periodRepository;
+    private final WorkloadObservationService observations;
 
-    public WorkloadSnapshotService(WorkloadDailySnapshotRepository dailyRepository, WorkloadSnapshotRepository periodRepository) {
-        this.dailyRepository=dailyRepository; this.periodRepository=periodRepository;
+    public WorkloadSnapshotService(WorkloadDailySnapshotRepository dailyRepository, WorkloadSnapshotRepository periodRepository,
+                                   WorkloadObservationService observations) {
+        this.dailyRepository=dailyRepository; this.periodRepository=periodRepository; this.observations=observations;
     }
 
     @Transactional
@@ -23,6 +25,7 @@ public class WorkloadSnapshotService {
             CandidateContext context=request.candidates().stream()
                     .filter(c -> c.employeeId().equals(result.employeeId())).findFirst().orElseThrow();
             for (DailyWorkload day : result.daily()) {
+                observations.observe(result.employeeId(),day);
                 WorkloadDailySnapshot snapshot=dailyRepository.findByEmployeeIdAndWorkDate(result.employeeId(),day.date())
                         .orElseGet(WorkloadDailySnapshot::new);
                 snapshot.update(request.enterpriseId(),result.employeeId(),context.departmentId(),day.date(),
