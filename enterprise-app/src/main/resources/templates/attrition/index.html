@@ -15,7 +15,16 @@
         <strong th:text="${recalculation.failed}"></strong> с ошибкой.
     </div>
 
-    <form class="filter-panel attrition-filters" method="get" th:action="@{/attrition}">
+    <details class="filter-disclosure" data-responsive-filters open
+             th:with="activeCount=${((param.from != null and param.from[0] != '') or (param.to != null and param.to[0] != '') ? 1 : 0)
+             + (param.departmentId != null and param.departmentId[0] != '' ? 1 : 0)
+             + (param.positionId != null and param.positionId[0] != '' ? 1 : 0)
+             + (param.projectId != null and param.projectId[0] != '' ? 1 : 0)
+             + (param.riskLevel != null and param.riskLevel[0] != '' ? 1 : 0)
+             + (param.minProbability != null and param.minProbability[0] != '' ? 1 : 0)
+             + (param.maxProbability != null and param.maxProbability[0] != '' ? 1 : 0)}">
+    <summary><i data-lucide="sliders-horizontal" aria-hidden="true"></i><span>Фильтры</span><span class="badge-soft" th:text="${'Активно: '+activeCount}"></span><i data-lucide="chevron-down" class="filter-chevron" aria-hidden="true"></i></summary>
+    <form class="attrition-filters" method="get" th:action="@{/attrition}">
         <label><span>Период с</span><input class="form-control" type="date" name="from" th:value="${overview.filter.from}"></label>
         <label><span>По</span><input class="form-control" type="date" name="to" th:value="${overview.filter.to}"></label>
         <label><span>Подразделение</span><select class="form-select" name="departmentId"><option value="">Все доступные</option><option th:each="item:${overview.departments}" th:value="${item.id}" th:selected="${item.id == overview.filter.departmentId}" th:text="${item.name}"></option></select></label>
@@ -26,6 +35,7 @@
         <label><span>До</span><input class="form-control" type="number" min="0" max="1" step="0.01" name="maxProbability" th:value="${overview.filter.maxProbability}" placeholder="1"></label>
         <div class="filter-actions"><button class="btn btn-primary">Применить</button><a class="btn btn-outline-secondary" th:href="@{/attrition}">Сбросить</a></div>
     </form>
+    </details>
 
     <section class="attrition-kpis" aria-label="Ключевые показатели риска">
         <article class="risk-kpi risk-high"><span class="kpi-symbol"><i data-lucide="triangle-alert" aria-hidden="true"></i></span><div><span>Высокий риск</span><strong th:text="${overview.highCount}"></strong><small>сотрудников с уровнем HIGH</small></div></article>

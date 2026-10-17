@@ -97,6 +97,16 @@ window.apiFetch = async function(url, options = {}) {
 })();
 
 // Local Lucide icons are shared by server-rendered and dynamically created controls.
+document.querySelectorAll('[data-responsive-filters]').forEach(panel => {
+ const compact=window.matchMedia('(max-width:600px)');
+ const update=()=>{
+  const containsFocus=panel.contains(document.activeElement);
+  panel.open=!compact.matches;
+  if(compact.matches && containsFocus) panel.querySelector('summary').focus();
+ };
+ update();compact.addEventListener('change',update);
+});
+
 window.refreshIcons = () => window.lucide?.createIcons({attrs:{'stroke-width':1.8}});
 refreshIcons();
 new MutationObserver(records => {
