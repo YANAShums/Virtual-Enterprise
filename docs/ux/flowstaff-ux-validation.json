@@ -1,0 +1,10 @@
+{
+  "pages": 15,
+  "topics": 14,
+  "functions": 164,
+  "nodes": 275,
+  "source_files": 49,
+  "bounds_checked": true,
+  "no_overlapping_boxes": true,
+  "all_source_files_exist": true
+}
