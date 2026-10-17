@@ -13,7 +13,7 @@
     <a th:href="@{/admin(section='schedules')}">Рабочие графики</a><a th:href="@{/admin(section='absences')}">Отсутствия</a>
     <a th:href="@{/admin(section='settings')}">Настройки</a><a th:href="@{/admin(section='roles')}">Роли</a>
     <a th:href="@{/admin(section='calendar')}">Календарь</a><a class="active" aria-current="page" th:href="@{/admin/ml}">ML-датасет</a>
-  </nav>
+  <a href="/admin/ml/models">Модели ML</a></nav>
 
   <div class="alert alert-danger" role="alert" th:if="${formError}" th:text="${formError}"></div>
   <div class="alert alert-danger" role="alert" th:if="${trainingError}" th:text="${trainingError}"></div>

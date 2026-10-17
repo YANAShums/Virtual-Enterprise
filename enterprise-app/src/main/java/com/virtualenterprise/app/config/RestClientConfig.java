@@ -10,6 +10,14 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(MlClientProperties.class)
 public class RestClientConfig {
     @Bean
+    RestClient mlAdministrationRestClient(RestClient.Builder builder, MlClientProperties properties) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(properties.getConnectTimeout());
+        factory.setReadTimeout(java.time.Duration.ofMinutes(3));
+        return builder.clone().baseUrl(properties.getBaseUrl())
+                .defaultHeader("X-Service-Token", properties.getServiceToken()).requestFactory(factory).build();
+    }
+    @Bean
     RestClient mlRestClient(RestClient.Builder builder,
                             MlClientProperties properties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();

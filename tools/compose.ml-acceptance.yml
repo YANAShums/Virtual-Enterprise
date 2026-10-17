@@ -5,10 +5,18 @@ services:
     ports: !override
       - "127.0.0.1:13307:3306"
   workload-service:
+    build:
+      dockerfile: tools/Dockerfile.acceptance-java
+      args:
+        MODULE: workload-service
     container_name: flowstaff-ml-check-workload
     ports:
       - "127.0.0.1:18081:8081"
   enterprise-app:
+    build:
+      dockerfile: tools/Dockerfile.acceptance-java
+      args:
+        MODULE: enterprise-app
     container_name: flowstaff-ml-check-app
     ports: !override
       - "127.0.0.1:18080:8080"

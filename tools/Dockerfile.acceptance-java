@@ -1,0 +1,7 @@
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+ARG MODULE
+COPY tools/acceptance-runtime/${MODULE}.jar app.jar
+COPY tools/container-healthcheck.sh healthcheck.sh
+RUN mkdir -p /data/files
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
