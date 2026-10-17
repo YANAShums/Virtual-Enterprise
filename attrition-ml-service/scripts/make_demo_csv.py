@@ -13,7 +13,7 @@ import numpy as np
 from app.features import NUMERIC_FEATURES
 
 HEADER = ["employee_snapshot_id", "employee_id", "snapshot_date", "attrition_within_90d"] \
-         + NUMERIC_FEATURES + ["department_code", "position_code"]
+         + NUMERIC_FEATURES + ["department_code", "position_code", "data_origin"]
 
 
 def main(path: str, n_emp: int = 400, snaps: int = 3, seed: int = 0) -> None:
@@ -31,6 +31,7 @@ def main(path: str, n_emp: int = 400, snaps: int = 3, seed: int = 0) -> None:
                 row = {
                     "employee_snapshot_id": str(uuid.uuid4()), "employee_id": f"E{e}",
                     "snapshot_date": d.isoformat(), "attrition_within_90d": y,
+                    "data_origin": "SYNTHETIC",
                     "tenure_months": tenure + s, "employment_rate": 1.0,
                     "active_projects_count": rng.integers(0, 4), "active_tasks_count": rng.integers(0, 12),
                     "overdue_tasks_30d": rng.integers(0, 5), "completed_tasks_90d": rng.integers(0, 30),

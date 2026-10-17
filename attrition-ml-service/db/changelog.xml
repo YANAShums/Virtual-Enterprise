@@ -150,4 +150,7 @@
       ALTER TABLE ml_v2_terminations ADD COLUMN cancelled BOOLEAN NOT NULL DEFAULT FALSE;
     </sql>
   </changeSet>
+  <changeSet id="ml-008-data-origin" author="flowstaff">
+    <sql>ALTER TABLE ml_v2_feature_snapshots ADD COLUMN data_origin VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN';</sql>
+  </changeSet>
 </databaseChangeLog>

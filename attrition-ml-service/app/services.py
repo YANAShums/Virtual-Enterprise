@@ -147,6 +147,9 @@ def import_csv(session: Session, settings: Settings, content: bytes, today: Opti
             if d + timedelta(days=settings.horizon_days) > today:
                 raise ValueError("окно наблюдения ещё не завершено (или дата в будущем)")
             label = int(row["attrition_within_90d"])
+            origin = (row.get("data_origin") or "UNKNOWN").strip()
+            if origin not in ("REAL_HISTORY", "SYNTHETIC", "UNKNOWN"):
+                raise ValueError("data_origin: REAL_HISTORY, SYNTHETIC или UNKNOWN")
             if label not in (0, 1):
                 raise ValueError("метка должна быть 0 или 1")
             emp = row["employee_id"].strip()
@@ -166,12 +169,14 @@ def import_csv(session: Session, settings: Settings, content: bytes, today: Opti
             if existing is not None and existing.source == "OPERATIONAL":
                 raise ValueError("снимок уже есть в операционных данных")
             if existing is None:
-                session.add(FeatureSnapshot(
+                existing=FeatureSnapshot(
                     employee_snapshot_id=sid, employee_id=emp, snapshot_date=d, source="IMPORT",
                     schema_version=SCHEMA_VERSION, features=feats, label_status=lr.LABELED,
-                    target_label=label, label_reason="imported", labeled_at=utcnow()))
+                    target_label=label, label_reason="imported", labeled_at=utcnow())
+                session.add(existing)
             else:
                 existing.features, existing.target_label = feats, label
+            existing.data_origin = origin
             imported += 1
         except Exception as exc:  # noqa: BLE001 — собираем ошибки по строкам
             errors.append({"line": line_no, "error": str(exc)})
@@ -191,6 +196,7 @@ def _load_labeled(session: Session) -> pd.DataFrame:
     df.insert(1, "employee_id", [r.employee_id for r in rows])
     df.insert(2, "snapshot_date", pd.to_datetime([r.snapshot_date for r in rows]))
     df["y"] = [r.target_label for r in rows]
+    df["data_origin"] = [r.data_origin for r in rows]
     return df.sort_values(["snapshot_date", "employee_snapshot_id"]).reset_index(drop=True)
 
 
@@ -262,9 +268,11 @@ def train_model(session: Session, settings: Settings) -> ModelVersion:
         else:
             tr, te = split_by_employee(df, settings.test_size, settings.random_state)
         X = df[ALL_FEATURES]
-        pipe = build_pipeline(settings.random_state).fit(X.iloc[tr], df.y.iloc[tr])
+        from .quality import fit_calibrated, quality_report
+        pipe, calibration = fit_calibrated(df.iloc[tr].reset_index(drop=True), settings.random_state)
         y_te = df.y.iloc[te].to_numpy()
         metrics = compute_metrics(y_te, pipe.predict_proba(X.iloc[te])[:, 1])
+        metrics["quality_report"] = quality_report(df,pipe,te,calibration,settings.random_state,settings.horizon_days)
 
         # Сравнение с активной моделью на том же тестовом наборе
         active_metrics = None
@@ -279,6 +287,7 @@ def train_model(session: Session, settings: Settings) -> ModelVersion:
         path = Path(settings.model_dir) / f"{version}.joblib"
         joblib.dump({"pipeline": pipe, "version": version, "schema_version": SCHEMA_VERSION,
                      "features": ALL_FEATURES, "dataset_id": ds.dataset_id,
+                     "calibration_partition": calibration,
                      "holdout_employee_ids": sorted(set(df.employee_id.iloc[te]))}, path)
         sha = hashlib.sha256(path.read_bytes()).hexdigest()
 

@@ -35,6 +35,7 @@ public class MlWorkflowController {
     }
     @GetMapping("/template.csv") ResponseEntity<byte[]> template() {
         String header = "employee_snapshot_id,employee_id,snapshot_date,attrition_within_90d,tenure_months,employment_rate,active_projects_count,active_tasks_count,overdue_tasks_30d,completed_tasks_90d,avg_task_delay_days_90d,avg_workload_30d,avg_workload_90d,overload_days_30d,overload_days_90d,absence_days_90d,task_reassignments_90d,project_changes_180d,workload_days_available_30d,workload_days_available_90d,department_code,position_code\n";
+        header=header.strip()+",data_origin\n";
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header("Content-Disposition","attachment; filename=flowstaff-ml-v2.csv").body(header.getBytes(StandardCharsets.UTF_8));
     }

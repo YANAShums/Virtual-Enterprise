@@ -25,6 +25,7 @@ class FeatureSnapshot(Base):
     employee_id: Mapped[str] = mapped_column(String(64), index=True)
     snapshot_date: Mapped[date] = mapped_column(Date, index=True)
     source: Mapped[str] = mapped_column(String(16))             # OPERATIONAL | IMPORT
+    data_origin: Mapped[str] = mapped_column(String(16), default="UNKNOWN")
     schema_version: Mapped[str] = mapped_column(String(48), index=True)
     features: Mapped[dict[str, Any]] = mapped_column(JSON)
     label_status: Mapped[str] = mapped_column(String(12), default="PENDING", index=True)

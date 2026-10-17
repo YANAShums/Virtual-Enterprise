@@ -17,7 +17,14 @@
 <p th:text="${'Обучена: ' + candidate.trainedAt + ' · train: ' + candidate.trainRows + ' · test: ' + candidate.testRows}"></p>
 <div class="table-responsive"><table class="table"><caption>Метрики проверочной выборки</caption><thead><tr><th>ROC-AUC</th><th>PR-AUC</th><th>Lift PR-AUC</th><th>Precision</th><th>Recall</th><th>Brier</th></tr></thead><tbody><tr><td th:text="${#numbers.formatDecimal(candidate.metrics['roc_auc'],1,3)}"></td><td th:text="${#numbers.formatDecimal(candidate.metrics['pr_auc'],1,3)}"></td><td th:text="${#numbers.formatDecimal(candidate.metrics['pr_auc_lift'],1,3)}"></td><td th:text="${#numbers.formatDecimal(candidate.metrics['precision'],1,3)}"></td><td th:text="${#numbers.formatDecimal(candidate.metrics['recall'],1,3)}"></td><td th:text="${#numbers.formatDecimal(candidate.metrics['brier'],1,3)}"></td></tr></tbody></table></div>
 <ul th:if="${!candidate.gatePassed}"><li th:each="reason:${candidate.gateReasons}" th:text="${reason}"></li></ul>
-<p class="text-secondary">Высокая оценка на искусственных данных не подтверждает качество на кадровой истории. Проценты требуют отдельной оценки калибровки.</p>
+<div th:if="${candidate.metrics['quality_report'] != null}">
+<p>Бизнес-качество: <strong>не подтверждено на реальной кадровой истории</strong>.</p>
+<p th:text="${'Происхождение данных (заявлено источником): ' + candidate.metrics['quality_report']['data_origin_counts']}"></p>
+<p th:text="${'Временная оценка: ' + candidate.metrics['quality_report']['temporal_backtest']['status']}"></p>
+<p th:if="${candidate.metrics['quality_report']['temporal_backtest']['reason'] != null}" th:text="${candidate.metrics['quality_report']['temporal_backtest']['reason']}"></p>
+<details><summary>Калибровка и охват HR</summary><p th:text="${'Brier до / после калибровки: ' + candidate.metrics['quality_report']['calibration']['brier_before'] + ' / ' + candidate.metrics['quality_report']['calibration']['brier_after']}"></p><p th:text="${'При охвате 10%: precision = ' + candidate.metrics['quality_report']['hr_capacity']['precision'] + ', recall = ' + candidate.metrics['quality_report']['hr_capacity']['recall']}"></p></details>
+</div>
+<p class="text-secondary">Метрики проверяют техническое качество. Для реальных решений нужны подтверждённая история и согласование порогов с HR. Необязательный столбец CSV data_origin: REAL_HISTORY, SYNTHETIC, UNKNOWN.</p>
 <form th:if="${candidate.gatePassed and candidate.status != 'ACTIVE'}" th:action="@{/admin/ml/models/{version}/activate(version=${candidate.version})}" method="post"><button class="btn btn-primary" th:aria-label="${'Активировать модель ' + candidate.version}">Активировать эту версию</button></form>
 <p th:if="${candidate.status == 'ACTIVE'}" class="text-success">Активная модель используется для прогнозов проекта.</p>
 </div></section></main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>

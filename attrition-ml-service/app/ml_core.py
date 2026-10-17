@@ -163,7 +163,7 @@ def predict_with_factors(pipe: Pipeline, X: pd.DataFrame, top_n: int = 5) -> lis
     clf: LogisticRegression = pipe.named_steps["clf"]
     Xt = prep.transform(X[ALL_FEATURES])
     names = [n.split("__", 1)[1] for n in prep.get_feature_names_out()]
-    contrib = Xt * clf.coef_[0]
+    contrib = Xt * clf.coef_[0] * getattr(pipe, "contribution_scale", 1.0)
     out = []
     for i in range(len(X)):
         order = np.argsort(-np.abs(contrib[i]))[:top_n]
