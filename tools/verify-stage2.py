@@ -121,7 +121,7 @@ def main():
     admin.save("schedules",{"timezone":"Invalid/Zone"},schedule,409)
     # Create employee through existing UI to prove new references work in real workload calculation.
     result=admin.submit(admin.form("/employees/new"),{"personnelNumber":PREFIX,"lastName":PREFIX,"firstName":"Test","hireDate":"2026-01-01","departmentId":dep,"positionId":pos,"workScheduleId":schedule,"employmentRate":"1"})
-    assert result[0]==200 and "/employees?created" in result[2],result[2]
+    assert result[0]==200 and re.search(r"/employees/\d+\?created(?:$|&)",result[2]),result[2]
     _,html,_=admin.request("/admin?section=employees")
     row=next(row for row in re.findall(r'<tr class="admin-row"[^>]*>(.*?)</tr>',html,re.S) if PREFIX in row)
     employee=int(re.search(r'/employees/(\d+)',row).group(1))

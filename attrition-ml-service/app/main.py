@@ -13,9 +13,11 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.import_service import import_dataset, safe_filename
 from app.prediction import PredictionError, load_serving_model, predict_many
 from app.training import TrainingError, model_info, train_and_register
+from app.api_v2 import create_app
 
 app = FastAPI(title="FlowStaff AI Attrition Service", version="0.5.0",
               docs_url=None, redoc_url=None, openapi_url=None)
+app.mount("/internal/v2", create_app())
 
 
 def get_connection():
@@ -29,8 +31,8 @@ def check_database():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import','ml-004-model-training-registry','ml-005-attrition-risk-thresholds')")
-            if cursor.fetchone()[0] != 5:
+            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import','ml-004-model-training-registry','ml-005-attrition-risk-thresholds','ml-006-v2-ml-workflow')")
+            if cursor.fetchone()[0] != 6:
                 raise RuntimeError("ML migrations are not complete")
     finally:
         connection.close()

@@ -139,4 +139,8 @@
         ('CRITICAL',0.800000,NULL,TRUE,4);
     ]]></sql>
   </changeSet>
+  <changeSet id="ml-006-v2-ml-workflow" author="flowstaff">
+    <comment>Add versioned ML workflow tables without modifying existing MVP data.</comment>
+    <sqlFile path="v2-tables.sql" relativeToChangelogFile="true" splitStatements="true"/>
+  </changeSet>
 </databaseChangeLog>

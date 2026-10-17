@@ -10,6 +10,7 @@ output
 **/__pycache__
 **/.pytest_cache
 **/.venv
+.venv-ml
 
 .env.*
 secrets

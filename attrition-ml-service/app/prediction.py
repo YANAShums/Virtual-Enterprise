@@ -12,6 +12,8 @@ from app.training import (CATEGORICAL_FEATURES, FEATURES, NUMERIC_FEATURES,
 
 MAX_TOP_FACTORS = 5
 FACTOR_LABELS = {
+    "workload_days_available_30d": "Полнота данных нагрузки за месяц",
+    "workload_days_available_90d": "Полнота данных нагрузки за три месяца",
     "tenure_months": "Стаж в организации",
     "employment_rate": "Размер ставки",
     "department_code": "Подразделение сотрудника",
@@ -80,6 +82,8 @@ def load_serving_model(connection_factory: Callable, artifact_directory: str) ->
 def predict_many(model: ServingModel, rows: list[dict]) -> list[dict]:
     if not rows:
         return []
+    if model.artifact.get("pipelineFormat") == "v2":
+        return _predict_v2(model, rows)
     matrix = np.asarray([[row.get(name) for name in FEATURES] for row in rows], dtype=object)
     pipeline = model.artifact["pipeline"]
     probabilities = pipeline.predict_proba(matrix)[:, 1]
@@ -95,6 +99,26 @@ def predict_many(model: ServingModel, rows: list[dict]) -> list[dict]:
             "modelVersion": model.version,
             "topFactors": top_factors(row_contributions),
         })
+    return results
+
+
+def _predict_v2(model: ServingModel, rows: list[dict]) -> list[dict]:
+    from .features import feature_frame
+    from .ml_core import predict_with_factors
+    scored = predict_with_factors(model.artifact["pipeline"], feature_frame(rows))
+    results = []
+    for item in scored:
+        contributions = {}
+        for factor in item["factors"]:
+            name = factor["feature"]
+            name = next((key for key in FACTOR_LABELS if name == key or
+                         (key in CATEGORICAL_FEATURES and name.startswith(key + "_"))), name)
+            if name in FACTOR_LABELS:
+                contributions[name] = contributions.get(name, 0) + factor["contribution"]
+        results.append({"probability": round(item["probability"], 6),
+                        "riskLevel": risk_level(item["probability"], model.thresholds),
+                        "modelVersionId": model.model_version_id, "modelVersion": model.version,
+                        "topFactors": top_factors(contributions)})
     return results
 
 

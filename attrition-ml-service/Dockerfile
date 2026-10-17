@@ -7,9 +7,11 @@ COPY attrition-ml-service/app ./app
 RUN mkdir -p /data/models && chown appuser:appuser /data/models
 
 FROM runtime-base AS test
+ENV DATABASE_URL=sqlite:///:memory: PYTHONPATH=/app
 COPY attrition-ml-service/requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY attrition-ml-service/tests ./tests
+COPY attrition-ml-service/scripts ./scripts
 USER appuser
 CMD ["python", "-m", "pytest", "tests", "-q", "-p", "no:cacheprovider"]
 
