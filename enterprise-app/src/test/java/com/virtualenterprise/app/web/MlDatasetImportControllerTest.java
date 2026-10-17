@@ -42,8 +42,7 @@ class MlDatasetImportControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "history.csv", "text/csv", "header".getBytes());
         when(service.importCsv(any())).thenReturn(new MlImportResult(
                 "batch-1", "history.csv", 3, 2, 1, "COMPLETED_WITH_ERRORS", List.of()));
-        mvc.perform(get("/admin/ml")).andExpect(status().isOk()).andExpect(view().name("admin/ml-import"))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Импорт исторических данных")));
+        mvc.perform(get("/admin/ml")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/admin/ml/models"));
         mvc.perform(multipart("/admin/ml/import").file(file).with(csrf()))
                 .andExpect(status().isOk()).andExpect(model().attributeExists("result"));
     }

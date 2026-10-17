@@ -30,7 +30,7 @@ public class MlDatasetImportController {
     }
 
     @GetMapping("/admin/ml")
-    String page(Model model) { addModelInfo(model); return "admin/ml-import"; }
+    String page(Model model) { return "redirect:/admin/ml/models"; }
 
     @PostMapping("/admin/ml/import")
     String importDataset(@RequestParam("file") MultipartFile file, Model model) {

@@ -83,6 +83,7 @@ class TrainingRun(Base):
     __tablename__ = "ml_v2_training_runs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    request_key: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
     started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(12), default="RUNNING")      # RUNNING|SUCCESS|FAILED

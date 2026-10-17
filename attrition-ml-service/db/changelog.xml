@@ -153,4 +153,7 @@
   <changeSet id="ml-008-data-origin" author="flowstaff">
     <sql>ALTER TABLE ml_v2_feature_snapshots ADD COLUMN data_origin VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN';</sql>
   </changeSet>
+  <changeSet id="ml-009-training-request-key" author="flowstaff">
+    <sql>ALTER TABLE ml_v2_training_runs ADD COLUMN request_key VARCHAR(64) NULL UNIQUE;</sql>
+  </changeSet>
 </databaseChangeLog>

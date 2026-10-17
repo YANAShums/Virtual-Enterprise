@@ -21,7 +21,7 @@ from app.main import create_app  # noqa: E402
 @pytest.fixture()
 def client(tmp_path):
     s = Settings(database_url="sqlite:///:memory:", model_dir=str(tmp_path / "m"), dataset_dir=str(tmp_path / "d"),
-                 api_key="k", min_positives=20, min_negatives=50, min_employees=30)
+                 api_key="k", min_positives=20, min_negatives=50, min_employees=30, auto_activate=True)
     return TestClient(create_app(s), headers={"X-API-Key": "k"})
 
 

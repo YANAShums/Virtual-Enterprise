@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,6 +12,29 @@ import joblib
 from sqlalchemy import text
 
 from .features import ALL_FEATURES, SCHEMA_VERSION
+
+
+def sync_legacy_imports(session,today):
+    """Copy mature legacy imports into the sole training workflow; preserve original tables."""
+    from .models import FeatureSnapshot
+    from .features import normalize_features
+    from .services import snapshot_id
+    from sqlalchemy import select
+    rows=session.execute(text("SELECT * FROM attrition_feature_snapshots WHERE source='IMPORT' AND target_label IS NOT NULL")).mappings()
+    copied=0
+    for row in rows:
+        if row['snapshot_date']+timedelta(days=90)>today:continue
+        employee=str(row['employee_id']);day=row['snapshot_date']
+        exists=session.scalars(select(FeatureSnapshot).where(FeatureSnapshot.employee_id==employee,
+            FeatureSnapshot.snapshot_date==day,FeatureSnapshot.schema_version==SCHEMA_VERSION)).first()
+        if exists is not None:continue
+        session.add(FeatureSnapshot(employee_snapshot_id=snapshot_id(employee,day),employee_id=employee,
+            snapshot_date=day,source='IMPORT',data_origin='UNKNOWN',schema_version=SCHEMA_VERSION,
+            features=normalize_features({name:row.get(name) for name in ALL_FEATURES}),
+            label_status='LABELED',target_label=row['target_label'],label_reason='legacy_import'))
+        copied+=1
+    session.commit()
+    return copied
 
 
 def sync_project_snapshots(session, limit=5000, today=None):

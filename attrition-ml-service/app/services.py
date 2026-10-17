@@ -238,9 +238,9 @@ def load_bundle(path: str, expected_sha: Optional[str] = None) -> dict[str, Any]
     return joblib.load(path)
 
 
-def train_model(session: Session, settings: Settings) -> ModelVersion:
+def train_model(session: Session, settings: Settings, request_key=None) -> ModelVersion:
     """Обучает модель-кандидат. Активной она становится только после гейта (и подтверждения)."""
-    run = TrainingRun()
+    run = TrainingRun(request_key=request_key)
     session.add(run)
     session.commit()
     run_id = run.id
@@ -299,8 +299,6 @@ def train_model(session: Session, settings: Settings) -> ModelVersion:
         session.add(mv)
         run.status, run.version, run.finished_at = "SUCCESS", version, utcnow()
         session.commit()
-        if passed and settings.auto_activate:
-            activate_model(session, version, settings)
         return mv
     except Exception as exc:
         session.rollback()

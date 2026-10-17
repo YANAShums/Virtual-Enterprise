@@ -12,12 +12,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.import_service import import_dataset, safe_filename
 from app.prediction import PredictionError, load_serving_model, predict_many
-from app.training import TrainingError, model_info, train_and_register
+from app.training import model_info
 from app.api_v2 import create_app
 
 app = FastAPI(title="FlowStaff AI Attrition Service", version="0.5.0",
               docs_url=None, redoc_url=None, openapi_url=None)
-app.mount("/internal/v2", create_app())
+workflow_app = create_app()
+app.mount("/internal/v2", workflow_app)
 
 
 def get_connection():
@@ -31,8 +32,8 @@ def check_database():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import','ml-004-model-training-registry','ml-005-attrition-risk-thresholds','ml-006-v2-ml-workflow')")
-            if cursor.fetchone()[0] != 6:
+            cursor.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE ID IN ('ml-001-baseline','ml-002-feature-snapshots','ml-003-dataset-import','ml-004-model-training-registry','ml-005-attrition-risk-thresholds','ml-006-v2-ml-workflow','ml-007-versioned-termination-events','ml-008-data-origin','ml-009-training-request-key')")
+            if cursor.fetchone()[0] != 9:
                 raise RuntimeError("ML migrations are not complete")
     finally:
         connection.close()
@@ -230,12 +231,20 @@ async def upload_training_dataset(file: UploadFile = File(...),
 @app.post("/internal/v1/train")
 def train_model(request: TrainRequest, x_service_token: str | None = Header(default=None)):
     require_service_token(x_service_token)
+    from app import lifecycle
+    from app.ml_core import TrainingError as CandidateError
     try:
-        return train_and_register(get_connection, os.getenv("MODEL_STORAGE_PATH", "/data/models"),
-                                  str(request.idempotencyKey))
-    except TrainingError as exc:
-        status = 409 if exc.code in {"TRAINING_ALREADY_RUNNING", "IDEMPOTENCY_KEY_REUSED"} else 422
-        raise HTTPException(status_code=status, detail={"code": exc.code, "message": str(exc)})
+        with workflow_app.state.session_factory() as session:
+            mv=lifecycle.train_candidate(session, workflow_app.state.settings, str(request.idempotencyKey))
+            return {"status":mv.status,"version":mv.version,"algorithm":"LogisticRegression",
+                "trainedAt":mv.trained_at,"artifactAvailable":True,"trainingRows":mv.train_rows,
+                "testRows":mv.test_rows,"trainingRowCount":mv.train_rows+mv.test_rows,
+                "metrics":{**mv.metrics,"rocAuc":mv.metrics['roc_auc']},"runId":str(request.idempotencyKey),
+                "activationRequired":True,"gatePassed":mv.gate_passed}
+    except lifecycle.LifecycleBusy as exc:
+        raise HTTPException(status_code=409,detail={"code":str(exc)})
+    except CandidateError as exc:
+        raise HTTPException(status_code=422,detail={"code":"INSUFFICIENT_CLASS_DATA","message":str(exc)})
     except Exception:
         raise HTTPException(status_code=503, detail="MODEL_TRAINING_UNAVAILABLE")
 

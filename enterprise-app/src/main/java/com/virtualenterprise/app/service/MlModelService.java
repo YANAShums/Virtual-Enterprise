@@ -48,7 +48,7 @@ public class MlModelService {
                 String body = ex.getResponseBodyAsString();
                 String message = body.contains("INSUFFICIENT_CLASS_DATA")
                         ? "Для обучения нужны примеры обоих классов: уход и отсутствие ухода."
-                        : "Для обучения требуется не менее 10 корректных размеченных строк.";
+                        : "Для обучения нужны достаточная размеченная история и независимые сотрудники для проверки и калибровки.";
                 recordFailure(requestId, "TRAINING_DATA_INVALID");
                 throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, "TRAINING_DATA_INVALID", message);
             }

@@ -17,7 +17,7 @@
 
   <div class="alert alert-danger" role="alert" th:if="${formError}" th:text="${formError}"></div>
   <div class="alert alert-danger" role="alert" th:if="${trainingError}" th:text="${trainingError}"></div>
-  <div class="alert alert-success" role="status" th:if="${trainingResult}" th:text="${'Обучение завершено. Активирована модель ' + trainingResult.version + '.'}"></div>
+  <div class="alert alert-success" role="status" th:if="${trainingResult}" th:text="${'Создана версия ' + trainingResult.version + '. Статус: ' + trainingResult.status + '. Активация выполняется в разделе моделей после проверки качества.'}"></div>
   <div class="ml-import-layout">
     <section class="card ml-upload-card" aria-labelledby="uploadTitle">
       <div class="card-body">

@@ -14,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from . import services as svc
+from . import lifecycle
 from .config import Settings
 from .db import make_session_factory
 from .features import SCHEMA_VERSION
@@ -30,6 +31,10 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     app.state.session_factory = make_session_factory(settings.database_url)
     app.state.store = svc.ModelStore()
     training_lock = Lock()
+
+    @app.exception_handler(lifecycle.LifecycleBusy)
+    async def lifecycle_busy(request,exc):
+        return JSONResponse(status_code=409,content={"detail":str(exc)})
 
     @app.exception_handler(SQLAlchemyError)
     async def storage_error(request, exc):
@@ -109,7 +114,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         if not training_lock.acquire(blocking=False):
             raise HTTPException(409, "TRAINING_ALREADY_RUNNING")
         try:
-            mv = svc.train_model(s, settings)
+            mv = lifecycle.train_candidate(s, settings)
         except TrainingError as e:
             raise HTTPException(422, str(e))
         finally:
@@ -131,7 +136,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @api.post("/models/{version}/activate")
     def activate(version: str, s: Session = Depends(get_session)):
         try:
-            return _model_dict(svc.activate_model(s, version, settings))
+            return _model_dict(lifecycle.activate(s, version, settings))
         except LookupError as e:
             raise HTTPException(404, str(e))
         except TrainingError as e:

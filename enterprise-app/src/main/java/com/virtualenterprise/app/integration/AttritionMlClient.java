@@ -20,12 +20,21 @@ import java.util.function.Supplier;
 @Component
 public class AttritionMlClient implements AttritionPredictionGateway {
     private final RestClient client;
+    private final RestClient administration;
     private final int retryAttempts;
     private final Duration retryBackoff;
 
     public AttritionMlClient(@Qualifier("mlRestClient") RestClient mlRestClient,
                              MlClientProperties properties) {
+        this(mlRestClient,mlRestClient,properties);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AttritionMlClient(@Qualifier("mlRestClient") RestClient mlRestClient,
+                             @Qualifier("mlAdministrationRestClient") RestClient administration,
+                             MlClientProperties properties) {
         this.client = mlRestClient;
+        this.administration = administration;
         this.retryAttempts = Math.max(0, properties.getRetryAttempts());
         this.retryBackoff = properties.getRetryBackoff();
     }
@@ -47,7 +56,7 @@ public class AttritionMlClient implements AttritionPredictionGateway {
     }
 
     public MlModelInfo train(UUID idempotencyKey) {
-        return client.post().uri("/internal/v1/train")
+        return administration.post().uri("/internal/v1/train")
                 .body(Map.of("idempotencyKey", idempotencyKey.toString()))
                 .retrieve().body(MlModelInfo.class);
     }
