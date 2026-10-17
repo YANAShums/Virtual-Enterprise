@@ -52,11 +52,23 @@ tar -C "$model_root" -xzf "$source_dir/model-artifacts.tar.gz"
 
 while IFS=$'\t' read -r _ version _ artifact_path _ _ _; do
   [[ -z "$version" ]] && continue
-  artifact_name="${artifact_path##*/}"
+  artifact_name="${artifact_path#/data/models/}"
+  [[ "$artifact_name" != /* && "$artifact_name" != *..* ]] || { echo "Unsafe artifact path" >&2; exit 2; }
   [[ -f "$model_root/$artifact_name" ]] || {
     echo "Model artifact is missing after restore: $version" >&2
     exit 1
   }
 done < "$source_dir/model-registry.tsv"
+
+# V2 artifacts live in subdirectories; verify all candidate/archived versions too.
+mysql -h "$MYSQL_HOST" -P "${MYSQL_PORT:-3306}" -u "$MYSQL_USER" --batch --raw --skip-column-names enterprise_ml \
+  -e "SELECT file_path,file_sha256 FROM ml_v2_model_versions" > /tmp/v2-model-checks.tsv
+while IFS=$'\t' read -r artifact_path expected_sha; do
+  [[ -z "$artifact_path" ]] && continue
+  relative="${artifact_path#/data/models/}"
+  [[ "$relative" != /* && "$relative" != *..* ]] || { echo "Unsafe V2 artifact path" >&2; exit 2; }
+  [[ "$expected_sha" =~ ^[a-f0-9]{64}$ ]] || exit 2
+  printf '%s  %s\n' "$expected_sha" "$model_root/$relative" | sha256sum --check
+done < /tmp/v2-model-checks.tsv
 
 echo "Restore completed and verified: $backup_id"

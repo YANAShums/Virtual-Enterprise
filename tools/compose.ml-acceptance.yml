@@ -23,3 +23,7 @@ services:
   attrition-ml-service:
     ports:
       - "127.0.0.1:18082:8082"
+  backup:
+    volumes: !override
+      - ./output/ml-acceptance/backups:/backups
+      - model_storage:/data/models:ro

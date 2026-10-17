@@ -25,11 +25,13 @@ def operation(session):
             if not acquired:raise LifecycleBusy('MODEL_OPERATION_ALREADY_RUNNING')
         yield
     finally:
-        if connection is not None:
-            try:
-                if acquired:connection.execute(text("SELECT RELEASE_LOCK('flowstaff-ml-lifecycle')"))
-            finally:connection.close()
-        _local.release()
+        try:
+            if connection is not None:
+                try:
+                    if acquired:connection.execute(text("SELECT RELEASE_LOCK('flowstaff-ml-lifecycle')"))
+                finally:connection.close()
+        finally:
+            _local.release()
 
 
 def train_candidate(session,settings,request_key=None):

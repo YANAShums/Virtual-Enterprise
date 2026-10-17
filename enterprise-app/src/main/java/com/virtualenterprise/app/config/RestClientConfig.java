@@ -33,8 +33,12 @@ public class RestClientConfig {
     RestClient workloadRestClient(RestClient.Builder builder,
                                   @org.springframework.beans.factory.annotation.Value("${workload.base-url}") String baseUrl,
                                   @org.springframework.beans.factory.annotation.Value("${workload.service-token}") String token) {
+        SimpleClientHttpRequestFactory factory=new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(3));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(10));
         return builder.clone().baseUrl(baseUrl)
                 .defaultHeader("X-Service-Token", token)
+                .requestFactory(factory)
                 .build();
     }
 }

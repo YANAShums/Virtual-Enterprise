@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import timedelta
+from datetime import date,timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -23,11 +23,20 @@ def sync_legacy_imports(session,today):
     rows=session.execute(text("SELECT * FROM attrition_feature_snapshots WHERE source='IMPORT' AND target_label IS NOT NULL")).mappings()
     copied=0
     for row in rows:
-        if row['snapshot_date']+timedelta(days=90)>today:continue
-        employee=str(row['employee_id']);day=row['snapshot_date']
+        day=row['snapshot_date']
+        if isinstance(day,str):day=date.fromisoformat(day)
+        if day+timedelta(days=90)>today:continue
+        employee=str(row['employee_id'])
         exists=session.scalars(select(FeatureSnapshot).where(FeatureSnapshot.employee_id==employee,
             FeatureSnapshot.snapshot_date==day,FeatureSnapshot.schema_version==SCHEMA_VERSION)).first()
-        if exists is not None:continue
+        if exists is not None:
+            # Legacy corrections may refresh only rows owned by this bridge.
+            # Explicit V2 imports and operational snapshots take precedence.
+            if exists.source=='IMPORT' and exists.label_reason=='legacy_import':
+                exists.features=normalize_features({name:row.get(name) for name in ALL_FEATURES})
+                exists.target_label=row['target_label']
+                copied+=1
+            continue
         session.add(FeatureSnapshot(employee_snapshot_id=snapshot_id(employee,day),employee_id=employee,
             snapshot_date=day,source='IMPORT',data_origin='UNKNOWN',schema_version=SCHEMA_VERSION,
             features=normalize_features({name:row.get(name) for name in ALL_FEATURES}),

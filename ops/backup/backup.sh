@@ -51,7 +51,7 @@ create_backup() {
 
   mysql -h "$MYSQL_HOST" -P "${MYSQL_PORT:-3306}" -u "$MYSQL_USER" \
     --batch --raw --skip-column-names enterprise_ml \
-    -e "SELECT id,version,active,artifact_path,feature_schema_hash,training_dataset_hash,trained_at FROM ml_model_versions ORDER BY trained_at DESC,id DESC LIMIT 2" \
+    -e "SELECT id,version,active,artifact_path,feature_schema_hash,training_dataset_hash,trained_at FROM ml_model_versions ORDER BY trained_at DESC,id DESC" \
     > "$temporary/model-registry.tsv"
 
   if [[ -d "$model_root" ]]; then
