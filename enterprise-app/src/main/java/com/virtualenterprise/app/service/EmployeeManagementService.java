@@ -24,14 +24,16 @@ public class EmployeeManagementService {
     private final EmployeeAssignmentHistoryRepository assignments;
     private final EmployeeStatusHistoryRepository statuses;
     private final AuditTrailService audit;
+    private final MlEventOutboxRepository outbox;
 
     public EmployeeManagementService(EmployeeRepository employees, EnterpriseRepository enterprises,
                                      DepartmentRepository departments, PositionRepository positions,
                                      WorkScheduleRepository schedules, EmployeeAssignmentHistoryRepository assignments,
-                                     EmployeeStatusHistoryRepository statuses, AuditTrailService audit) {
+                                     EmployeeStatusHistoryRepository statuses, AuditTrailService audit, MlEventOutboxRepository outbox) {
         this.employees=employees; this.enterprises=enterprises; this.departments=departments;
         this.positions=positions; this.schedules=schedules; this.assignments=assignments; this.statuses=statuses;
         this.audit=audit;
+        this.outbox=outbox;
     }
 
     @Transactional(readOnly = true)
@@ -44,6 +46,7 @@ public class EmployeeManagementService {
         f.setManagerId(e.getManager()==null?null:e.getManager().getId()); f.setWorkScheduleId(e.getWorkSchedule().getId());
         f.setHireDate(e.getHireDate()); f.setEmploymentRate(e.getEmploymentRate()); f.setStatus(e.getStatus());
         f.setTerminationDate(e.getTerminationDate()); f.setTerminationReason(e.getTerminationReason());
+        f.setTerminationCategory(e.getTerminationCategory()==null?"OTHER":e.getTerminationCategory());
         f.setChangeEffectiveDate(LocalDate.now());
         return f;
     }
@@ -95,6 +98,7 @@ public class EmployeeManagementService {
         boolean statusChanged=!Objects.equals(previousStatus,f.getStatus());
         boolean terminationChanged="DISMISSED".equals(f.getStatus())
                 && (!Objects.equals(e.getTerminationDate(),f.getTerminationDate())
+                || !Objects.equals(e.getTerminationCategory(),f.getTerminationCategory())
                 || !Objects.equals(blankToNull(e.getTerminationReason()),blankToNull(f.getTerminationReason())));
         String reason=blankToNull(f.getChangeReason());
         if(assignmentChanged || (statusChanged && !"DISMISSED".equals(f.getStatus()))) {
@@ -114,12 +118,15 @@ public class EmployeeManagementService {
         copyCommon(e,f); e.setStatus(f.getStatus()); e.setActive("ACTIVE".equals(f.getStatus()));
         if("DISMISSED".equals(f.getStatus())) {
             e.setTerminationDate(f.getTerminationDate()); e.setTerminationReason(f.getTerminationReason().trim());
+            e.setTerminationCategory(f.getTerminationCategory());
         } else {
             e.setTerminationDate(null); e.setTerminationReason(null);
+            e.setTerminationCategory(null);
         }
         try {
             Employee saved=employees.saveAndFlush(e);
             audit.record("EMPLOYEE_UPDATED","EMPLOYEE",saved.getId(),before,employeeSnapshot(saved));
+            if(terminationChanged || (statusChanged && "DISMISSED".equals(previousStatus))) outbox.enqueue(saved);
             return saved;
         }
         catch(DataIntegrityViolationException ex) {
@@ -178,6 +185,8 @@ public class EmployeeManagementService {
     private void validateTermination(EmployeeForm f) {
         if(!"DISMISSED".equals(f.getStatus())) return;
         AdminRules.check(f.getTerminationDate()!=null,"Укажите дату увольнения");
+        AdminRules.check(Set.of("VOLUNTARY","INVOLUNTARY","CONTRACT_END","OTHER").contains(
+                Objects.toString(f.getTerminationCategory(),"")),"Укажите категорию увольнения");
         AdminRules.check(f.getTerminationReason()!=null && !f.getTerminationReason().isBlank(),
                 "Укажите причину увольнения");
         AdminRules.check(!f.getTerminationDate().isBefore(f.getHireDate()),
@@ -227,6 +236,7 @@ public class EmployeeManagementService {
         values.put("employmentRate",employee.getEmploymentRate());
         values.put("status",employee.getStatus());
         values.put("terminationDate",employee.getTerminationDate());
+        values.put("terminationCategory",employee.getTerminationCategory());
         return values;
     }
 }

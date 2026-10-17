@@ -39,8 +39,10 @@ class Termination(Base):
     __tablename__ = "ml_v2_terminations"
 
     employee_id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    termination_date: Mapped[date] = mapped_column(Date)
+    termination_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     reason_category: Mapped[str] = mapped_column(String(16))
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    cancelled: Mapped[bool] = mapped_column(default=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 

@@ -143,4 +143,11 @@
     <comment>Add versioned ML workflow tables without modifying existing MVP data.</comment>
     <sqlFile path="v2-tables.sql" relativeToChangelogFile="true" splitStatements="true"/>
   </changeSet>
+  <changeSet id="ml-007-versioned-termination-events" author="flowstaff">
+    <sql>
+      ALTER TABLE ml_v2_terminations MODIFY termination_date DATE NULL;
+      ALTER TABLE ml_v2_terminations ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE ml_v2_terminations ADD COLUMN cancelled BOOLEAN NOT NULL DEFAULT FALSE;
+    </sql>
+  </changeSet>
 </databaseChangeLog>

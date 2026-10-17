@@ -12,7 +12,7 @@ from typing import Any, Iterable, Optional
 
 import joblib
 import pandas as pd
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
 from . import labeling_rules as lr
@@ -72,12 +72,26 @@ def upsert_terminations(session: Session, items: Iterable[dict[str, Any]]) -> in
     n = 0
     for it in items:
         row = session.get(Termination, it["employee_id"])
+        revision = it.get("revision", 0)
+        if row is not None and revision < row.revision:
+            continue
+        values = (it.get("termination_date"), it.get("reason_category", "OTHER"), it.get("cancelled", False))
+        if row is not None and revision == row.revision:
+            if values == (row.termination_date, row.reason_category, row.cancelled):
+                continue
+            # Legacy callers have no revision; versioned events cannot be overwritten by them.
+            if revision > 0:
+                continue
         if row is None:
             session.add(Termination(employee_id=it["employee_id"], termination_date=it["termination_date"],
-                                    reason_category=it["reason_category"]))
+                                    reason_category=values[1], revision=revision, cancelled=values[2]))
         else:
-            row.termination_date = it["termination_date"]
-            row.reason_category = it["reason_category"]
+            row.termination_date, row.reason_category, row.cancelled = values
+            row.revision = revision
+        # Correct only derived operational labels. Features, imported labels and forecasts stay intact.
+        session.execute(update(FeatureSnapshot).where(FeatureSnapshot.employee_id == it["employee_id"],
+            FeatureSnapshot.source == "OPERATIONAL").values(label_status=lr.PENDING,
+                target_label=None, label_reason=None, labeled_at=None))
         n += 1
     session.commit()
     return n
@@ -87,7 +101,7 @@ def upsert_terminations(session: Session, items: Iterable[dict[str, Any]]) -> in
 def run_labeling(session: Session, settings: Settings, as_of: Optional[date] = None) -> dict[str, int]:
     """Проставляет метки снимкам со статусом PENDING по фактам увольнений."""
     as_of = as_of or date.today()
-    terms = {t.employee_id: t for t in session.scalars(select(Termination))}
+    terms = {t.employee_id: t for t in session.scalars(select(Termination).where(Termination.cancelled == False))}
     pending = session.scalars(select(FeatureSnapshot).where(
         FeatureSnapshot.label_status == lr.PENDING,
         FeatureSnapshot.source == "OPERATIONAL")).all()

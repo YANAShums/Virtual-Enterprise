@@ -13,10 +13,13 @@ public class FeatureSnapshotService {
     private final FeatureBuilder builder;
     private final AttritionMlClient ml;
     private final com.virtualenterprise.app.integration.MlWorkflowClient workflow;
+    private final com.virtualenterprise.app.service.WorkloadContextService workload;
 
     public FeatureSnapshotService(EmployeeRepository employees,FeatureBuilder builder,AttritionMlClient ml,
-                                   com.virtualenterprise.app.integration.MlWorkflowClient workflow) {
+                                   com.virtualenterprise.app.integration.MlWorkflowClient workflow,
+                                   com.virtualenterprise.app.service.WorkloadContextService workload) {
         this.employees=employees; this.builder=builder; this.ml=ml; this.workflow=workflow;
+        this.workload=workload;
     }
 
     public LocalDate currentDate() {
@@ -30,6 +33,10 @@ public class FeatureSnapshotService {
 
     @Transactional(readOnly=true)
     public FeatureBatchResult generateAndStore(LocalDate snapshotDate) {
+        if(snapshotDate.equals(currentDate())) {
+            var active=employees.findByActiveTrueOrderByLastNameAscFirstNameAsc();
+            if(!active.isEmpty()) workload.currentForEmployees(active,snapshotDate,snapshotDate);
+        }
         List<AttritionFeatureSnapshot> snapshots=buildActive(snapshotDate);
         if(snapshots.isEmpty()) return new FeatureBatchResult(snapshotDate,0,0,0);
         AttritionMlClient.StoredFeatureBatch result=ml.store(snapshots);

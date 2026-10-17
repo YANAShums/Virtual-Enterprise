@@ -26,6 +26,10 @@ public class EmployeeForm {
     private LocalDate terminationDate;
     @Size(max=500)
     private String terminationReason;
+    @Pattern(regexp="VOLUNTARY|INVOLUNTARY|CONTRACT_END|OTHER")
+    private String terminationCategory="OTHER";
+    public String getTerminationCategory(){return terminationCategory;}
+    public void setTerminationCategory(String value){terminationCategory=value;}
     @NotNull @DateTimeFormat(iso=DateTimeFormat.ISO.DATE)
     private LocalDate changeEffectiveDate;
     @Size(max=500)

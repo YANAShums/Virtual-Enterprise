@@ -15,3 +15,5 @@ databaseChangeLog:
       file: db/changelog/007-task-recommendations.sql
   - include:
       file: db/changelog/008-attrition-predictions.sql
+  - include:
+      file: db/changelog/009-ml-events.sql

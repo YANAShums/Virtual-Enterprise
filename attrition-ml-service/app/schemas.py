@@ -52,8 +52,16 @@ class SnapshotBatchIn(BaseModel):
 
 class TerminationIn(BaseModel):
     employee_id: str = Field(min_length=1, max_length=64)
-    termination_date: date
-    reason_category: ReasonCategory
+    termination_date: Optional[date] = None
+    reason_category: ReasonCategory = "OTHER"
+    revision: int = Field(default=0, ge=0)
+    cancelled: bool = False
+
+    @model_validator(mode="after")
+    def valid_event(self):
+        if not self.cancelled and self.termination_date is None:
+            raise ValueError("Для увольнения нужна дата")
+        return self
 
 
 class TerminationBatchIn(BaseModel):

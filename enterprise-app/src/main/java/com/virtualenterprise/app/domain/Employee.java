@@ -41,6 +41,10 @@ public class Employee {
     private LocalDate terminationDate;
     @Column(length = 500)
     private String terminationReason;
+    @Column(length = 16)
+    private String terminationCategory;
+    public String getTerminationCategory() { return terminationCategory; }
+    public void setTerminationCategory(String value) { terminationCategory=value; }
     @Column(nullable = false)
     private boolean active = true;
     @Version private Long version;

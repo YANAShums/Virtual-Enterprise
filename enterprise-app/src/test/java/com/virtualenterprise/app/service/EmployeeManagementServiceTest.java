@@ -22,8 +22,9 @@ class EmployeeManagementServiceTest {
     private final EmployeeAssignmentHistoryRepository assignments=mock(EmployeeAssignmentHistoryRepository.class);
     private final EmployeeStatusHistoryRepository statuses=mock(EmployeeStatusHistoryRepository.class);
     private final AuditTrailService audit=mock(AuditTrailService.class);
+    private final MlEventOutboxRepository outbox=mock(MlEventOutboxRepository.class);
     private final EmployeeManagementService service=new EmployeeManagementService(
-            employees,enterprises,departments,positions,schedules,assignments,statuses,audit);
+            employees,enterprises,departments,positions,schedules,assignments,statuses,audit,outbox);
 
     private Enterprise enterprise;
     private Department department;
@@ -75,6 +76,7 @@ class EmployeeManagementServiceTest {
         assertEquals("DISMISSED",updated.getStatus());
         assertFalse(updated.isActive());
         assertEquals(LocalDate.now(),updated.getTerminationDate());
+        verify(outbox).enqueue(updated);
         assertEquals(LocalDate.now().minusDays(1),current.getEffectiveTo());
         verify(assignments).save(argThat(item -> item.getDepartment()==newDepartment
                 && item.getEffectiveFrom().equals(LocalDate.now())));

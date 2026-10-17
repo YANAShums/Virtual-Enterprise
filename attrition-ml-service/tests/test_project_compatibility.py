@@ -55,6 +55,28 @@ def test_unlabeled_operational_snapshot_is_also_frozen(api):
         assert session.scalars(select(FeatureSnapshot)).one().features['avg_workload_30d'] is None
 
 
+def test_termination_correction_cancel_and_out_of_order_delivery(api):
+    api.post('/snapshots',json={'snapshots':[snap()]})
+    api.post('/labeling/run')
+    def label():
+        with api.app.state.session_factory() as s:
+            return s.scalars(select(FeatureSnapshot)).one().target_label
+    assert label()==0
+    event={'employee_id':'123','termination_date':(date.today()-timedelta(days=100)).isoformat(),
+           'reason_category':'VOLUNTARY','revision':1}
+    assert api.post('/terminations',json={'terminations':[event]}).json()['upserted']==1
+    api.post('/labeling/run'); assert label()==1
+    assert api.post('/terminations',json={'terminations':[event]}).json()['upserted']==0
+    event.update(revision=2,reason_category='INVOLUNTARY')
+    api.post('/terminations',json={'terminations':[event]}); api.post('/labeling/run')
+    assert label() is None
+    event.update(revision=3,cancelled=True,termination_date=None)
+    api.post('/terminations',json={'terminations':[event]}); api.post('/labeling/run'); assert label()==0
+    event.update(revision=1,cancelled=False,termination_date=date.today().isoformat())
+    assert api.post('/terminations',json={'terminations':[event]}).json()['upserted']==0
+    api.post('/labeling/run'); assert label()==0
+
+
 def test_snapshot_id_cannot_be_reassigned_to_another_employee(api):
     api.post("/snapshots", json={"snapshots": [snap(sid="same")]})
     assert api.post("/snapshots", json={"snapshots": [snap(employee="456", sid="same")]}).status_code == 422

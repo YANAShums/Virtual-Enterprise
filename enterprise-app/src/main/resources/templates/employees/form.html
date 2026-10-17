@@ -67,6 +67,7 @@
                 <div class="col-md-4"><label class="form-label" for="changeEffectiveDate">Дата изменения *</label><input id="changeEffectiveDate" th:field="*{changeEffectiveDate}" type="date" class="form-control" required></div>
                 <div class="col-md-4"><label class="form-label" for="changeReason">Причина изменения</label><input id="changeReason" th:field="*{changeReason}" class="form-control" maxlength="500" placeholder="Например, перевод в другой отдел"></div>
                 <div class="col-md-4"><label class="form-label" for="terminationDate">Дата увольнения</label><input id="terminationDate" th:field="*{terminationDate}" type="date" class="form-control"><div class="form-text">Обязательна для статуса «Уволен».</div></div>
+                <div class="col-md-4"><label class="form-label" for="terminationCategory">Категория увольнения</label><select id="terminationCategory" th:field="*{terminationCategory}" class="form-select"><option value="VOLUNTARY">По собственному желанию</option><option value="INVOLUNTARY">По инициативе работодателя</option><option value="CONTRACT_END">Окончание договора</option><option value="OTHER">Другое / не уточнено</option></select></div>
                 <div class="col-md-8"><label class="form-label" for="terminationReason">Причина увольнения</label><input id="terminationReason" th:field="*{terminationReason}" class="form-control" maxlength="500" placeholder="Основание кадрового решения"></div>
             </div>
         </section>
