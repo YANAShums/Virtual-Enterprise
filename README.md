@@ -9,7 +9,7 @@
 - список сотрудников с фильтром по подразделению;
 - список проектов;
 - Kanban-доска по проектам;
-- создание задачи через Bootstrap Offcanvas;
+- создание задачи в React-панели с расчётом загрузки;
 - предварительный расчёт загруженности кандидатов;
 - цветовые статусы `UNDERLOAD`, `NORMAL`, `WARNING`, `CRITICAL`, `UNAVAILABLE`;
 - обязательное подтверждение критической перегрузки;
@@ -18,17 +18,22 @@
 - optimistic locking по полю `version`;
 - история смены статусов, аудит и outbox-события;
 - раздел загруженности с дневной детализацией;
-- две логические базы MySQL и Liquibase-миграции;
+- три логические базы MySQL и Liquibase-миграции;
 - Docker Compose для запуска всего решения.
 
 ## Архитектура
 
-- `enterprise-app` — Spring Boot, Thymeleaf, Bootstrap, Spring Security, JPA;
+- `frontend` — React 19, TypeScript, Vite, React Router, TanStack Query, Radix Dialog, Phosphor Icons;
+- `enterprise-app` — Spring Boot, Spring Security, JPA; готовый React-интерфейс включается в JAR. Thymeleaf сохранён как внутренний контракт данных и форм, без старых стилей и скриптов;
 - `workload-service` — отдельный Spring Boot REST-сервис расчёта;
 - `common-contracts` — DTO контрактов между сервисами;
+- `attrition-ml-service` — отдельный Python-сервис прогноза текучести;
 - MySQL 8.4:
   - `enterprise_core`;
   - `enterprise_workload`.
+  - `enterprise_ml`.
+
+Интерфейс и его запуск: [frontend/README.md](frontend/README.md). Актуальные правила оформления: [docs/design-system.md](docs/design-system.md).
 
 ## Быстрый запуск через Docker
 

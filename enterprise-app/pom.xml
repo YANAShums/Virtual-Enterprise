@@ -9,6 +9,7 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>enterprise-app</artifactId>
+    <properties><frontend.skip>false</frontend.skip></properties>
 
     <dependencies>
         <dependency>
@@ -71,7 +72,19 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource><directory>src/main/resources</directory></resource>
+            <resource><directory>target/generated-resources/frontend</directory><targetPath>static</targetPath></resource>
+        </resources>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.5.0</version>
+                <executions><execution><id>react-build</id><phase>generate-resources</phase><goals><goal>exec</goal></goals>
+                    <configuration><skip>${frontend.skip}</skip><executable>node</executable>
+                        <arguments><argument>${project.basedir}/../frontend/scripts/build.mjs</argument></arguments>
+                    </configuration>
+                </execution></executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

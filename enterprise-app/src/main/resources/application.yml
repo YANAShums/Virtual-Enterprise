@@ -24,6 +24,7 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
   thymeleaf:
+    prefix: classpath:/ui-contracts/
     cache: false
   servlet:
     multipart:
