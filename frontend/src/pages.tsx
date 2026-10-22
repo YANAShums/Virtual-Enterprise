@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Eye, EyeSlash } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUpRight, CheckSquare, Eye, EyeSlash, Target, Users, Warning } from "@phosphor-icons/react";
 import type { Page } from "./api";
 import { PageUI, Render } from "./renderer";
 
@@ -38,7 +38,8 @@ function Login({ page }: Props) {
   return (
     <div className="login-layout">
       <div className="login-brand">
-        flowstaff<span>Люди · задачи · баланс</span>
+        <img src={`${import.meta.env.BASE_URL}images/flowstaff-mark.png`} alt="" />
+        <div>FlowStaff AI<span>Люди. Задачи. Рост.</span></div>
       </div>
       <section className="login-story">
         <p className="eyebrow">МЕНЬШЕ ШУМА. БОЛЬШЕ ФОКУСА.</p>
@@ -128,6 +129,7 @@ function Dashboard({ page, refresh }: Props) {
   ];
   const hasRisk = !!doc.querySelector("a.risk-stat");
   const canCreate = !!doc.querySelector(".rail-create");
+  const metricIcons = [CheckSquare, Users, Warning, Target];
   const date = new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     month: "long",
@@ -135,31 +137,39 @@ function Dashboard({ page, refresh }: Props) {
   }).format(new Date());
   return (
     <div className="dashboard-content">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{date}</p>
-          <h1>Обзор команды</h1>
-          <p className="page-subtitle">Ваш рабочий ритм — в одном месте.</p>
+      <section className="mountain-hero" aria-labelledby="teamOverviewTitle">
+        <div className="mountain-hero-copy">
+          <p className="eyebrow">FLOWSTAFF AI · ИНТЕЛЛЕКТ КОМАНДЫ</p>
+          <h1 id="teamOverviewTitle">{text(doc, ".dashboard-hero h1") || "Обзор команды"}</h1>
+          <p>{text(doc, ".dashboard-hero-copy > p:not(.eyebrow)")}</p>
+          <div className="hero-actions">
+            <Link to="/workload" className="btn btn-primary">
+              Посмотреть аналитику <ArrowRight size={17} />
+            </Link>
+            <Link to={hasRisk ? "/attrition" : "/tasks"} className="btn btn-hero-secondary">
+              {hasRisk ? "Кадровый риск" : "Открыть задачи"} <ArrowUpRight size={17} />
+            </Link>
+          </div>
         </div>
-        {canCreate && (
-          <Link to="/kanban?create=1" className="btn btn-primary">
-            Новая задача <ArrowUpRight size={18} />
-          </Link>
-        )}
-      </div>
+        <div className="hero-caption"><span>Сильные команды<br />создают большее будущее.</span><small>{date}</small></div>
+      </section>
       <div className="overview-metrics">
-        {primary.map((stat, index) => (
+        {primary.map((stat, index) => {
+          const Icon = metricIcons[index];
+          return (
           <Link
             key={index}
             to={stat.getAttribute("href")!}
             className={`metric metric-${index}`}
           >
+            <span className="metric-icon"><Icon size={25} aria-hidden="true" /></span>
             <span>{text(stat, "span")}</span>
             <strong>{text(stat, "strong")}</strong>
             <small>{text(stat, "small")}</small>
             <ArrowUpRight className="metric-arrow" size={18} />
           </Link>
-        ))}
+          );
+        })}
       </div>
       {doc.querySelector(".alert") && (
         <Render
@@ -168,46 +178,6 @@ function Dashboard({ page, refresh }: Props) {
           refresh={refresh}
         />
       )}
-      <section className="focus-section">
-        <div className="section-header">
-          <div>
-            <p className="eyebrow">В ФОКУСЕ</p>
-            <h2>Ближайшие задачи</h2>
-          </div>
-          <Link className="text-link" to="/tasks">
-            Все задачи <ArrowRight size={17} />
-          </Link>
-        </div>
-        <div className="focus-lanes">
-          {lanes.map((lane, index) => (
-            <div className="focus-lane" key={index}>
-              <div className="lane-label">
-                <span className={`status-dot status-dot-${index}`} />
-                {text(lane, "h3").replace(/\d+$/, "").trim()}
-                <span className="count">
-                  {lane.querySelectorAll(".compact-task").length}
-                </span>
-              </div>
-              {[
-                ...lane.querySelectorAll<HTMLAnchorElement>(".compact-task"),
-              ].map((task) => (
-                <Link
-                  key={task.getAttribute("href")}
-                  className="focus-task"
-                  to={task.getAttribute("href")!}
-                >
-                  <span>{text(task, "span")}</span>
-                  <time>{text(task, "small")}</time>
-                  <ArrowUpRight size={17} />
-                </Link>
-              ))}
-              {!lane.querySelector(".compact-task") && (
-                <p className="quiet-empty">Здесь пока спокойно</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
       <div className="overview-bottom">
         <section className="surface team-load">
           <div className="section-header">
@@ -251,6 +221,11 @@ function Dashboard({ page, refresh }: Props) {
           <p className="section-footnote">
             Плановая загрузка на ближайшие 7 дней
           </p>
+        </section>
+        <section className="surface work-summary">
+          <div className="section-header"><div><p className="eyebrow">АКТУАЛЬНАЯ СВОДКА</p><h2>Статус работы</h2></div><Target size={23} aria-hidden="true" /></div>
+          <div className="summary-total"><strong>{text(primary[0], "strong")}</strong><span>активных задач</span></div>
+          <dl>{[...doc.querySelectorAll(".status-card dl > div")].map((row, index) => <div key={index}><dt>{text(row, "dt")}</dt><dd>{text(row, "dd")}</dd></div>)}</dl>
         </section>
         <section className="surface attention-card">
           <div className="section-header">
@@ -304,6 +279,47 @@ function Dashboard({ page, refresh }: Props) {
           )}
         </section>
       </div>
+      <section className="focus-section">
+        <div className="section-header">
+          <div>
+            <p className="eyebrow">В ФОКУСЕ</p>
+            <h2>Ближайшие задачи</h2>
+          </div>
+          <Link className="text-link" to="/tasks">
+            Все задачи <ArrowRight size={17} />
+          </Link>
+          {canCreate && <Link to="/kanban?create=1" className="btn btn-primary">Новая задача <ArrowUpRight size={16} /></Link>}
+        </div>
+        <div className="focus-lanes">
+          {lanes.map((lane, index) => (
+            <div className="focus-lane" key={index}>
+              <div className="lane-label">
+                <span className={`status-dot status-dot-${index}`} />
+                {text(lane, "h3").replace(/\d+$/, "").trim()}
+                <span className="count">
+                  {lane.querySelectorAll(".compact-task").length}
+                </span>
+              </div>
+              {[
+                ...lane.querySelectorAll<HTMLAnchorElement>(".compact-task"),
+              ].map((task) => (
+                <Link
+                  key={task.getAttribute("href")}
+                  className="focus-task"
+                  to={task.getAttribute("href")!}
+                >
+                  <span>{text(task, "span")}</span>
+                  <time>{text(task, "small")}</time>
+                  <ArrowUpRight size={17} />
+                </Link>
+              ))}
+              {!lane.querySelector(".compact-task") && (
+                <p className="quiet-empty">Здесь пока спокойно</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

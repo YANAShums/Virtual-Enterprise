@@ -17,9 +17,18 @@ import {
   ArrowLeft,
   ArrowRight,
   BellSimple,
+  ChartBar,
+  CheckSquare,
+  FileText,
+  FolderSimple,
+  GearSix,
+  House,
+  Kanban,
   List,
   MagnifyingGlass,
   SignOut,
+  TrendDown,
+  Users,
   X,
 } from "@phosphor-icons/react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -28,6 +37,7 @@ import type { Page } from "./api";
 import { PageContent } from "./pages";
 import { Render } from "./renderer";
 import "./styles.css";
+import "./green-theme.css";
 
 const client = new QueryClient({
   defaultOptions: {
@@ -146,10 +156,23 @@ function App() {
   const navItems = (
     <>
       <Link className="brand" to="/dashboard">
-        flowstaff<span>Рабочее пространство</span>
+        <img src={`${import.meta.env.BASE_URL}images/flowstaff-mark.png`} alt="" />
+        <div>FlowStaff AI<span>Люди. Задачи. Рост.</span></div>
       </Link>
       <nav aria-label="Основная навигация">
-        {nav.map((item) => (
+        {nav.map((item) => {
+          const Icon = ({
+            "/dashboard": House,
+            "/tasks": CheckSquare,
+            "/projects": FolderSimple,
+            "/kanban": Kanban,
+            "/employees": Users,
+            "/workload": ChartBar,
+            "/attrition": TrendDown,
+            "/reports": FileText,
+            "/admin": GearSix,
+          } as Record<string, typeof House>)[item.href] || FolderSimple;
+          return (
           <Link
             key={item.href}
             to={item.href}
@@ -160,16 +183,18 @@ function App() {
                 : undefined
             }
           >
+            <Icon size={20} aria-hidden="true" />
             {(
               {
-                Главная: "Обзор",
+                Главная: "Главная",
                 Доски: "Доска",
                 Аналитика: "Загрузка",
                 Администрирование: "Управление",
               } as Record<string, string>
             )[item.label] || item.label}
           </Link>
-        ))}
+          );
+        })}
       </nav>
       <div className="sidebar-bottom">
         <span className="workspace-dot" />
