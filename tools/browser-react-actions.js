@@ -21,7 +21,7 @@ async (page) => {
   await page.getByLabel("Логин", { exact: true }).fill("admin");
   await page.getByLabel("Пароль", { exact: true }).fill("admin123");
   await page.getByRole("button", { name: "Войти в пространство" }).click();
-  await page.locator(".mountain-hero h1").waitFor();
+  await page.getByRole("heading", { name: "Обзор организации", exact: true }).waitFor();
   checks.push("Ошибка входа и успешная повторная авторизация");
   await go("/kanban?projectId=1");
   await page
@@ -210,7 +210,7 @@ async (page) => {
   await page.getByLabel("Логин", { exact: true }).fill("employee");
   await page.getByLabel("Пароль", { exact: true }).fill("employee123");
   await page.getByRole("button", { name: "Войти в пространство" }).click();
-  await page.locator(".mountain-hero h1").waitFor();
+  await page.getByRole("heading", { name: "Обзор организации", exact: true }).waitFor();
   if (
     await page
       .locator(

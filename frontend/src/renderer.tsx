@@ -442,6 +442,9 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
       ? attr.value !== "false"
       : attr.value;
   }
+  if (["td", "dd", "time", "code"].includes(tag) && !element.children.length && /^\s*(?:[#v]?[\d]+[\d\s.,:/%\-]*|[A-Z]{2,}[-_]\d+)\s*(?:ч|дн\.?)?\s*$/.test(element.textContent || "")) {
+    props.className = `${props.className || ""} data`;
+  }
   if (
     element.style.width &&
     element.matches(
@@ -609,17 +612,22 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", element.dataset.taskId || "");
     };
-    props.onDragEnd = () => ui.setDrag(null);
+    props.onDragEnd = () => { ui.setDrag(null); document.querySelectorAll(".is-drag-target").forEach(node => node.classList.remove("is-drag-target")); };
   }
   if (element.matches(".kanban-column")) {
     props.onDragOver = (event: React.DragEvent) => {
       if (ui.drag) {
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
+        event.currentTarget.classList.add("is-drag-target");
       }
+    };
+    props.onDragLeave = (event: React.DragEvent) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.classList.remove("is-drag-target");
     };
     props.onDrop = (event: React.DragEvent) => {
       event.preventDefault();
+      event.currentTarget.classList.remove("is-drag-target");
       if (ui.drag) void ui.status(ui.drag, element.dataset.status!);
       ui.setDrag(null);
     };

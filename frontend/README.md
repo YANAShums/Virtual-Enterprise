@@ -1,6 +1,6 @@
 # Интерфейс FlowStaff
 
-React 19 + TypeScript + Vite. Тёмная минималистичная тема, локальный Onest, Phosphor Icons; диалоги Radix, навигация React Router, загрузка TanStack Query.
+React 19 + TypeScript + Vite. Тема Black × Lilac × Lime, локальные Suisse Intl и JetBrains Mono, Phosphor Icons; диалоги Radix, навигация React Router, загрузка TanStack Query.
 
 ## Запуск и сборка
 
@@ -32,6 +32,12 @@ Vite слушает 5173 и проксирует запросы к backend:8080.
 Формы сохраняют action, multipart, formaction, скрытые поля версии и CSRF, checkbox-маркеры Spring и ошибки. Kanban, создание задачи, подтверждение перегрузки, смена статусов и комментарий причины реализованы в React и используют существующий JSON API.
 
 Новые самостоятельные экраны следует писать компонентами React и подключать к явным DTO. При последующей замене транспорта можно убрать адаптер без изменения нового AppShell и дизайн-токенов.
+
+## Дизайн-система
+
+Токены — `src/tokens.css`, оформление — `src/product-theme.css`, общие компоненты — `src/ui.tsx`. UI-кит доступен в Vite dev на `http://127.0.0.1:5173/dev/design-system` и отсутствует в production. Подробные правила — [docs/design-system.md](../docs/design-system.md).
+
+Предоставленный Suisse Regular содержит только латиницу. По подтверждённому выбору пользователя русский текст отображается локальным Onest, латиница — Suisse. JetBrains Mono используется только для данных; OFL-лицензия сохранена рядом с файлами.
 
 ## Проверки
 

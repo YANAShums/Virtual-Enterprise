@@ -21,7 +21,7 @@ async (page) => {
   await page.getByLabel("Пароль", { exact: true }).fill("admin123");
   await page.getByRole("button", { name: "Войти в пространство" }).click();
   await page.waitForURL("**/dashboard");
-  await page.locator(".mountain-hero h1").waitFor();
+  await page.getByRole("heading", { name: "Обзор организации", exact: true }).waitFor();
   const routes = [
     "/dashboard",
     "/tasks",
@@ -107,7 +107,7 @@ async (page) => {
     }
   }
   await page.goto(base + "/dashboard");
-  await page.locator(".mountain-hero h1").waitFor();
+  await page.getByRole("heading", { name: "Обзор организации", exact: true }).waitFor();
   await page.getByRole("button", { name: "Открыть меню", exact: true }).click();
   await page.getByRole("dialog").waitFor();
   await page.keyboard.press("Escape");

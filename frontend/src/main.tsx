@@ -17,6 +17,9 @@ import {
   ArrowLeft,
   ArrowRight,
   BellSimple,
+  CalendarBlank,
+  CaretDown,
+  CirclesThreePlus,
   ChartBar,
   CheckSquare,
   FileText,
@@ -36,8 +39,10 @@ import { downloadFile, fetchPage, submitForm } from "./api";
 import type { Page } from "./api";
 import { PageContent } from "./pages";
 import { Render } from "./renderer";
+import { DesignSystem } from "./design-system";
+import "./tokens.css";
 import "./styles.css";
-import "./green-theme.css";
+import "./product-theme.css";
 
 const client = new QueryClient({
   defaultOptions: {
@@ -50,7 +55,9 @@ function App() {
   const navigate = useNavigate();
   const cache = useQueryClient();
   const url = location.pathname + location.search;
+  const designSystem = import.meta.env.DEV && location.pathname === "/dev/design-system";
   const query = useQuery({
+    enabled: !designSystem,
     queryKey: ["page", url],
     queryFn: ({ signal }) => fetchPage(url, undefined, signal),
   });
@@ -69,7 +76,8 @@ function App() {
     setMenu(false);
     setAccount(false);
     setMessage("");
-    main.current?.focus();
+    window.scrollTo(0, 0);
+    main.current?.focus({ preventScroll: true });
   }, [url]);
   useEffect(() => {
     if (!page) return;
@@ -153,56 +161,25 @@ function App() {
   const unread = page?.document.querySelector(
     ".notification-count",
   )?.textContent;
-  const navItems = (
-    <>
-      <Link className="brand" to="/dashboard">
-        <img src={`${import.meta.env.BASE_URL}images/flowstaff-mark.png`} alt="" />
-        <div>FlowStaff AI<span>Люди. Задачи. Рост.</span></div>
-      </Link>
-      <nav aria-label="Основная навигация">
-        {nav.map((item) => {
-          const Icon = ({
-            "/dashboard": House,
-            "/tasks": CheckSquare,
-            "/projects": FolderSimple,
-            "/kanban": Kanban,
-            "/employees": Users,
-            "/workload": ChartBar,
-            "/attrition": TrendDown,
-            "/reports": FileText,
-            "/admin": GearSix,
-          } as Record<string, typeof House>)[item.href] || FolderSimple;
-          return (
-          <Link
-            key={item.href}
-            to={item.href}
-            aria-current={
-              location.pathname === item.href ||
-              location.pathname.startsWith(item.href + "/")
-                ? "page"
-                : undefined
-            }
-          >
-            <Icon size={20} aria-hidden="true" />
-            {(
-              {
-                Главная: "Главная",
-                Доски: "Доска",
-                Аналитика: "Загрузка",
-                Администрирование: "Управление",
-              } as Record<string, string>
-            )[item.label] || item.label}
-          </Link>
-          );
-        })}
-      </nav>
-      <div className="sidebar-bottom">
-        <span className="workspace-dot" />
-        Команда в фокусе
-        <span className="sidebar-note">Люди · задачи · баланс</span>
-      </div>
-    </>
-  );
+  const navGroups = [
+    { title: "Работа", routes: ["/dashboard", "/projects", "/tasks", "/kanban"] },
+    { title: "Команда", routes: ["/employees", "/workload"] },
+    { title: "Кадровая аналитика", routes: ["/attrition", "/reports"] },
+    { title: "Система", routes: ["/admin"] },
+  ];
+  const navItems = <>
+    <Link className="brand" to="/dashboard"><CirclesThreePlus size={29} className="brand-symbol" aria-hidden /><span>FlowStaff<span className="brand-ai">AI</span></span></Link>
+    <nav aria-label="Основная навигация">{navGroups.map(group => {
+      const items = group.routes.flatMap(route => nav.filter(item => item.href === route));
+      if (!items.length) return null;
+      return <div className="nav-group" key={group.title}><span className="nav-group-label">{group.title}</span>{items.map(item => {
+        const Icon = ({ "/dashboard": House, "/tasks": CheckSquare, "/projects": FolderSimple, "/kanban": Kanban, "/employees": Users, "/workload": ChartBar, "/attrition": TrendDown, "/reports": FileText, "/admin": GearSix } as Record<string, typeof House>)[item.href] || FolderSimple;
+        return <Link key={item.href} to={item.href} aria-current={location.pathname === item.href || location.pathname.startsWith(item.href + "/") ? "page" : undefined}><Icon size={19} aria-hidden /><span>{({ Главная: "Обзор", Команда: "Сотрудники", Доски: "Доска", Аналитика: "Загрузка", Администрирование: "Управление" } as Record<string, string>)[item.label] || item.label}</span></Link>;
+      })}</div>;
+    })}</nav>
+    <div className="sidebar-bottom"><CirclesThreePlus size={22} aria-hidden /><strong>Данные для решений.</strong><span>Люди — в центре внимания.</span>{import.meta.env.DEV && <Link to="/dev/design-system">Дизайн-система <ArrowRight size={14} aria-hidden /></Link>}</div>
+  </>;
+  if (designSystem) return <DesignSystem />;
 
   return (
     <div
@@ -258,7 +235,7 @@ function App() {
               >
                 <ArrowLeft size={19} />
               </button>
-              <span className="workspace-label">Ваше пространство</span>
+              <span className="workspace-label">Рабочее пространство</span>
             </div>
             <form
               className="global-search"
@@ -283,6 +260,7 @@ function App() {
               </kbd>
             </form>
             <div className="topbar-trailing">
+              <Link className="context-period" to="/workload"><CalendarBlank size={17} aria-hidden /><span>Ближайшие 7 дней</span><CaretDown size={12} aria-hidden /></Link>
               {canNotify && (
                 <Link
                   to="/notifications"
@@ -295,12 +273,12 @@ function App() {
               )}
               <div className="account-wrap">
                 <button
-                  className="account-avatar"
+                  className="account-trigger"
                   aria-expanded={account}
                   aria-label={`Аккаунт ${username}`}
                   onClick={() => setAccount(!account)}
                 >
-                  {username.slice(0, 2).toUpperCase()}
+                  <span className="account-avatar">{username.slice(0, 2).toUpperCase()}</span><span className="account-summary"><strong>{username}</strong><small>{role}</small></span><CaretDown size={13} aria-hidden />
                 </button>
                 {account && (
                   <>

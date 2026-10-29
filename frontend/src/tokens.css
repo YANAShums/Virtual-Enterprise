@@ -1,0 +1,54 @@
+@font-face { font-family: "Suisse Intl"; src: url("./assets/suisse/SuisseIntl-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("./assets/fonts/JetBrainsMono-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("./assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+:root {
+  --color-sidebar: #151517;
+  --color-dark-surface: #202023;
+  --color-background: #f0f0f2;
+  --color-surface: #fafafb;
+  --color-surface-elevated: #ffffff;
+  --color-text-primary: #19191c;
+  --color-text-secondary: #6f6f76;
+  --color-text-muted: #96969e;
+  --color-text-on-muted: #585860;
+  --color-border: #dadadf;
+  --color-divider: #e6e6e9;
+  --color-lime: #ccf33f;
+  --color-lime-hover: #bce72e;
+  --color-lime-pressed: #a9d51e;
+  --color-lime-soft: #eff8ca;
+  --color-lilac: #8d7bea;
+  --color-lilac-hover: #7967d8;
+  --color-lilac-soft: #ece8ff;
+  --color-lilac-surface: #f5f2ff;
+  --color-ai-text: #5743ac;
+  --color-success: #328760;
+  --color-success-text: #286b4b;
+  --color-success-soft: #e5f4eb;
+  --color-warning: #d39827;
+  --color-warning-text: #825b12;
+  --color-warning-soft: #fbf0d5;
+  --color-danger: #da4d54;
+  --color-danger-text: #b82e3a;
+  --color-danger-soft: #fce8e9;
+  --color-info: #596fd3;
+  --color-info-text: #4557ad;
+  --color-info-soft: #e9ecfa;
+  --color-on-dark: #f6f6f8;
+  --color-sidebar-secondary: #a9a9b3;
+  --color-overlay: #15151780;
+  --font-ui: "Suisse Intl", Onest, system-ui, sans-serif;
+  --font-data: "JetBrains Mono", monospace;
+  --text-h1: 32px; --text-h2: 20px; --text-h3: 17px;
+  --text-body: 14px; --text-label: 12px; --text-caption: 12px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px;
+  --radius-control: 8px; --radius-card: 12px; --radius-dialog: 14px;
+  --shadow-card: 0 1px 2px #1414190a, 0 4px 12px #14141908;
+  --shadow-floating: 0 12px 36px #1414191f;
+  --size-control: 40px; --size-control-lg: 44px; --size-icon: 40px;
+  --motion-hover: 140ms; --motion-panel: 220ms;
+  --z-sidebar: 30; --z-header: 25; --z-overlay: 80; --z-dialog: 81;
+  --sidebar-width: 216px;
+}

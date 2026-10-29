@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, CheckSquare, Eye, EyeSlash, Target, Users, Warning } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUpRight, Eye, EyeSlash, CirclesThreePlus } from "@phosphor-icons/react";
 import type { Page } from "./api";
 import { PageUI, Render } from "./renderer";
+import { Overview } from "./overview";
+import { People } from "./people";
 
 type Props = { page: Page; refresh: () => unknown };
 const text = (root: ParentNode, selector: string) =>
@@ -15,9 +17,11 @@ export function PageContent(props: Props) {
   return (
     <PageUI {...props}>
       {path === "/dashboard" ? (
-        <Dashboard {...props} />
+        <Overview {...props} />
       ) : path === "/projects" ? (
         <Projects {...props} />
+      ) : path === "/employees" ? (
+        <People {...props} />
       ) : (
         <div className={`page-content ${path.replaceAll("/", "-").slice(1)}`}>
           {[...page.document.querySelector("main")!.childNodes].map(
@@ -38,8 +42,8 @@ function Login({ page }: Props) {
   return (
     <div className="login-layout">
       <div className="login-brand">
-        <img src={`${import.meta.env.BASE_URL}images/flowstaff-mark.png`} alt="" />
-        <div>FlowStaff AI<span>Люди. Задачи. Рост.</span></div>
+        <CirclesThreePlus size={32} className="brand-symbol" aria-hidden />
+        <div>FlowStaff<span className="brand-ai">AI</span><small>Люди и работа в одном фокусе</small></div>
       </div>
       <section className="login-story">
         <p className="eyebrow">МЕНЬШЕ ШУМА. БОЛЬШЕ ФОКУСА.</p>
@@ -118,216 +122,11 @@ function Login({ page }: Props) {
   );
 }
 
-function Dashboard({ page, refresh }: Props) {
-  const doc = page.document;
-  const stats = [...doc.querySelectorAll<HTMLAnchorElement>(".dashboard-stat")];
-  const primary = stats.slice(0, 4);
-  const lanes = [...doc.querySelectorAll(".task-lane")];
-  const departments = [...doc.querySelectorAll(".department-bar")];
-  const risks = [
-    ...doc.querySelectorAll<HTMLAnchorElement>("a.insight-message"),
-  ];
-  const hasRisk = !!doc.querySelector("a.risk-stat");
-  const canCreate = !!doc.querySelector(".rail-create");
-  const metricIcons = [CheckSquare, Users, Warning, Target];
-  const date = new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-  }).format(new Date());
-  return (
-    <div className="dashboard-content">
-      <section className="mountain-hero" aria-labelledby="teamOverviewTitle">
-        <div className="mountain-hero-copy">
-          <p className="eyebrow">FLOWSTAFF AI · ИНТЕЛЛЕКТ КОМАНДЫ</p>
-          <h1 id="teamOverviewTitle">{text(doc, ".dashboard-hero h1") || "Обзор команды"}</h1>
-          <p>{text(doc, ".dashboard-hero-copy > p:not(.eyebrow)")}</p>
-          <div className="hero-actions">
-            <Link to="/workload" className="btn btn-primary">
-              Посмотреть аналитику <ArrowRight size={17} />
-            </Link>
-            <Link to={hasRisk ? "/attrition" : "/tasks"} className="btn btn-hero-secondary">
-              {hasRisk ? "Кадровый риск" : "Открыть задачи"} <ArrowUpRight size={17} />
-            </Link>
-          </div>
-        </div>
-        <div className="hero-caption"><span>Сильные команды<br />создают большее будущее.</span><small>{date}</small></div>
-      </section>
-      <div className="overview-metrics">
-        {primary.map((stat, index) => {
-          const Icon = metricIcons[index];
-          return (
-          <Link
-            key={index}
-            to={stat.getAttribute("href")!}
-            className={`metric metric-${index}`}
-          >
-            <span className="metric-icon"><Icon size={25} aria-hidden="true" /></span>
-            <span>{text(stat, "span")}</span>
-            <strong>{text(stat, "strong")}</strong>
-            <small>{text(stat, "small")}</small>
-            <ArrowUpRight className="metric-arrow" size={18} />
-          </Link>
-          );
-        })}
-      </div>
-      {doc.querySelector(".alert") && (
-        <Render
-          node={doc.querySelector(".alert")!}
-          page={page}
-          refresh={refresh}
-        />
-      )}
-      <div className="overview-bottom">
-        <section className="surface team-load">
-          <div className="section-header">
-            <div>
-              <p className="eyebrow">БАЛАНС КОМАНДЫ</p>
-              <h2>Загрузка подразделений</h2>
-            </div>
-            <Link
-              className="icon-button"
-              aria-label="Открыть загрузку"
-              to="/workload"
-            >
-              <ArrowUpRight size={20} />
-            </Link>
-          </div>
-          {departments.map((department, index) => (
-            <div className="load-row" key={index}>
-              <div>
-                <span>{text(department, "span")}</span>
-                <strong>
-                  {department.querySelectorAll("span")[1]?.textContent}
-                </strong>
-              </div>
-              <div className="load-track">
-                <span
-                  style={{
-                    width:
-                      department.querySelector<HTMLElement>(".progress-bar")
-                        ?.style.width || "0%",
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-          {!departments.length && (
-            <p className="quiet-empty">
-              Нет данных о загрузке. Проверьте выбранный период и доступность
-              сервиса.
-            </p>
-          )}
-          <p className="section-footnote">
-            Плановая загрузка на ближайшие 7 дней
-          </p>
-        </section>
-        <section className="surface work-summary">
-          <div className="section-header"><div><p className="eyebrow">АКТУАЛЬНАЯ СВОДКА</p><h2>Статус работы</h2></div><Target size={23} aria-hidden="true" /></div>
-          <div className="summary-total"><strong>{text(primary[0], "strong")}</strong><span>активных задач</span></div>
-          <dl>{[...doc.querySelectorAll(".status-card dl > div")].map((row, index) => <div key={index}><dt>{text(row, "dt")}</dt><dd>{text(row, "dd")}</dd></div>)}</dl>
-        </section>
-        <section className="surface attention-card">
-          <div className="section-header">
-            <div>
-              <p className="eyebrow">ВНИМАНИЕ К ЛЮДЯМ</p>
-              <h2>{hasRisk ? "Кадровый риск" : "Состояние команды"}</h2>
-            </div>
-            <span className="workspace-dot" />
-          </div>
-          {hasRisk ? (
-            <>
-              <div className="risk-totals">
-                {stats.slice(4).map((stat, index) => (
-                  <Link to={stat.getAttribute("href")!} key={index}>
-                    <strong>{text(stat, "strong")}</strong>
-                    <span>{text(stat, "span")}</span>
-                  </Link>
-                ))}
-              </div>
-              {risks.slice(0, 3).map((risk, index) => (
-                <Link
-                  className="risk-row"
-                  key={index}
-                  to={risk.getAttribute("href")!}
-                >
-                  <span>{text(risk, "strong")}</span>
-                  <small>{text(risk, "p")}</small>
-                  <ArrowUpRight size={16} />
-                </Link>
-              ))}
-              {!risks.length && (
-                <p className="quiet-empty">
-                  Сохранённых прогнозов пока нет. Расчёт доступен в кадровой
-                  аналитике.
-                </p>
-              )}
-              <Link to="/attrition" className="text-link">
-                Открыть прогнозы <ArrowRight size={17} />
-              </Link>
-            </>
-          ) : (
-            <>
-              <h3 className="team-state">{text(doc, ".dashboard-hero h1")}</h3>
-              <p className="muted">
-                {text(doc, ".dashboard-hero-copy > p:not(.eyebrow)")}
-              </p>
-              <Link to="/workload" className="text-link">
-                Посмотреть загрузку <ArrowRight size={17} />
-              </Link>
-            </>
-          )}
-        </section>
-      </div>
-      <section className="focus-section">
-        <div className="section-header">
-          <div>
-            <p className="eyebrow">В ФОКУСЕ</p>
-            <h2>Ближайшие задачи</h2>
-          </div>
-          <Link className="text-link" to="/tasks">
-            Все задачи <ArrowRight size={17} />
-          </Link>
-          {canCreate && <Link to="/kanban?create=1" className="btn btn-primary">Новая задача <ArrowUpRight size={16} /></Link>}
-        </div>
-        <div className="focus-lanes">
-          {lanes.map((lane, index) => (
-            <div className="focus-lane" key={index}>
-              <div className="lane-label">
-                <span className={`status-dot status-dot-${index}`} />
-                {text(lane, "h3").replace(/\d+$/, "").trim()}
-                <span className="count">
-                  {lane.querySelectorAll(".compact-task").length}
-                </span>
-              </div>
-              {[
-                ...lane.querySelectorAll<HTMLAnchorElement>(".compact-task"),
-              ].map((task) => (
-                <Link
-                  key={task.getAttribute("href")}
-                  className="focus-task"
-                  to={task.getAttribute("href")!}
-                >
-                  <span>{text(task, "span")}</span>
-                  <time>{text(task, "small")}</time>
-                  <ArrowUpRight size={17} />
-                </Link>
-              ))}
-              {!lane.querySelector(".compact-task") && (
-                <p className="quiet-empty">Здесь пока спокойно</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
 function Projects(props: Props) {
   const doc = props.page.document;
   const rows = [...doc.querySelectorAll<HTMLTableRowElement>(".project-item")];
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"list" | "cards">("list");
   const visible = rows.filter((row) =>
     row.textContent
       ?.toLocaleLowerCase("ru")
@@ -358,9 +157,9 @@ function Projects(props: Props) {
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Найти проект"
         />
-        <span className="muted">Все проекты</span>
+        <div className="project-view-switch" role="group" aria-label="Вид проектов"><button className="btn btn-sm" aria-pressed={view === "list"} onClick={() => setView("list")}>Список</button><button className="btn btn-sm" aria-pressed={view === "cards"} onClick={() => setView("cards")}>Карточки</button></div>
       </div>
-      <div className="project-library">
+      {view === "list" ? <div className="table-responsive"><table className="table projects-table"><Render node={doc.querySelector(".projects-table thead")!} {...props} /><tbody>{visible.map((row, i) => <Render key={i} node={row} {...props} />)}</tbody></table></div> : <div className="project-library">
         {visible.map((row, index) => {
           const link =
             row.querySelector<HTMLAnchorElement>(".project-title a")!;
@@ -412,7 +211,7 @@ function Projects(props: Props) {
             </article>
           );
         })}
-      </div>
+      </div>}
       {!visible.length && (
         <div className="empty-state">
           <h2>
