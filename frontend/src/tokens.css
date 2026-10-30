@@ -39,6 +39,14 @@
   --color-info-soft: var(--color-dust-blue-soft);
   --color-danger-critical: #a52736;
   --color-confirm-surface: #303135;
+  --color-feedback-success-bg: #f3f5ef;
+  --color-feedback-success-border: #abb99a;
+  --color-feedback-warning-bg: #faf7ef;
+  --color-feedback-warning-border: #d8c390;
+  --color-feedback-danger-bg: #fbf3f3;
+  --color-feedback-danger-border: #dfb4b9;
+  --color-feedback-info-bg: #f1f3f8;
+  --color-feedback-info-border: #b7c2d9;
   --color-risk-low-chart: #53846e;
   --color-risk-medium-chart: #d6a547;
   --color-risk-high-chart: #dc7078;

@@ -386,9 +386,16 @@ input:user-invalid, select:user-invalid, textarea:user-invalid, .is-invalid, [ar
 .kit-toast { background: var(--color-success-soft); color: var(--color-success-text); border: 1px solid var(--color-success); }
 .kit-toast .btn { color: var(--color-success-text); }
 .kit-toast .icon-button { color: var(--color-success-text); }
-.alert-success, .kit-toast { background: var(--color-confirm-surface); border: 1px solid var(--color-lime); color: var(--color-on-dark); }
-.alert-success :is(strong, small, .small, .text-secondary), .kit-toast .btn, .kit-toast .icon-button { color: var(--color-on-dark); }
-.alert-success > svg { color: var(--color-lime); }
+.alert, .kit-toast { border-radius: var(--radius-control); box-shadow: none; }
+.alert-success, .kit-toast { background: var(--color-feedback-success-bg); border: 1px solid var(--color-feedback-success-border); color: var(--color-text-primary); }
+.alert-warning { background: var(--color-feedback-warning-bg); border-color: var(--color-feedback-warning-border); color: var(--color-text-primary); }
+.alert-danger { background: var(--color-feedback-danger-bg); border-color: var(--color-feedback-danger-border); color: var(--color-text-primary); }
+.alert-info, .alert-neutral { background: var(--color-feedback-info-bg); border-color: var(--color-feedback-info-border); color: var(--color-text-primary); }
+.alert :is(strong, small, .small, .text-secondary), .kit-toast .btn, .kit-toast .icon-button { color: inherit; }
+.alert-success > svg { color: var(--color-success-text); }
+.alert-warning > svg { color: var(--color-warning-text); }
+.alert-danger > svg { color: var(--color-danger-text); }
+.alert-info > svg { color: var(--color-info-text); }
 .risk-distribution .risk-dot.risk-low { background: var(--color-risk-low-chart); }
 .risk-distribution .risk-dot.risk-medium { background: var(--color-risk-medium-chart); }
 .risk-distribution .risk-dot.risk-high { background: var(--color-risk-high-chart); }
@@ -401,6 +408,19 @@ input:user-invalid, select:user-invalid, textarea:user-invalid, .is-invalid, [ar
 .risk-distribution .risk-legend dt { font-size: 12px; }
 .risk-distribution .risk-legend dd { font: 500 14px var(--font-data); }
 .risk-distribution .risk-dot { width: 9px; height: 9px; }
+.vector-donut::before { display: none; }
+.vector-donut > svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.vector-donut circle { fill: none; stroke-width: 18; }
+.vector-donut .donut-track { stroke: var(--color-divider); }
+.vector-donut .donut-sector-0 { stroke: var(--color-success); }
+.vector-donut .donut-sector-1 { stroke: var(--color-warning); }
+.vector-donut .donut-sector-2 { stroke: var(--color-danger); }
+.vector-donut .donut-sector-3 { stroke: var(--color-danger-critical); }
+.risk-distribution .vector-donut { background: transparent; }
+.risk-distribution .risk-dot.risk-low { background: var(--color-success); }
+.risk-distribution .risk-dot.risk-medium { background: var(--color-warning); }
+.risk-distribution .risk-dot.risk-high { background: var(--color-danger); }
+.risk-distribution .risk-dot.risk-critical { background: var(--color-danger-critical); }
 .kit-dropdown { position: relative; }
 .kit-dropdown > summary { list-style: none; }
 .kit-dropdown-menu { position: absolute; top: calc(100% + 8px); left: 0; min-width: 220px; z-index: var(--z-header); padding: var(--space-2); background: var(--color-surface-elevated); border: 1px solid var(--color-border); box-shadow: var(--shadow-floating); border-radius: var(--radius-control); }

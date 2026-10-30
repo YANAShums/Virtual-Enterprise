@@ -4,6 +4,18 @@ import { ArrowRight, Tray, Sparkle, Info, CheckCircle, WarningCircle, XCircle } 
 
 export type Tone = "neutral" | "success" | "warning" | "danger" | "ai" | "info";
 
+export function RiskDonut({ counts, children }: { counts: number[]; children: ReactNode }) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  const circumference = 2 * Math.PI * 64;
+  let offset = 0;
+  return <div className="risk-donut vector-donut" role="img" aria-label={`Прогнозов: ${total}. LOW: ${counts[0]}, MEDIUM: ${counts[1]}, HIGH: ${counts[2]}, CRITICAL: ${counts[3]}`}>
+    <svg viewBox="0 0 160 160" aria-hidden="true"><circle className="donut-track" cx="80" cy="80" r="64" />{counts.map((count, i) => {
+      const length = total ? count / total * circumference : 0;
+      const start = offset; offset += length;
+      return count > 0 ? <circle key={i} className={`donut-sector donut-sector-${i}`} cx="80" cy="80" r="64" strokeDasharray={`${Math.max(0, length - (count === total ? 0 : 3))} ${circumference}`} strokeDashoffset={-start} /> : null;
+    })}</svg>{children}</div>;
+}
+
 export function Button({ variant = "primary", className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ai" | "danger" | "ghost" }) {
   return <button className={`btn btn-${variant} ${className}`} {...props} />;
 }

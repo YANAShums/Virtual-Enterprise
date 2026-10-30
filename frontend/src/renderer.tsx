@@ -40,6 +40,7 @@ import {
 import { api } from "./api";
 import type { Page } from "./api";
 import { TaskCreate } from "./task-create";
+import { RiskDonut } from "./ui";
 
 type UI = {
   page: Page;
@@ -55,6 +56,11 @@ type UI = {
   selectedDay: string | null;
 };
 const Context = createContext<UI>(null!);
+function displayedRiskCounts(page: Page): number[] {
+  const levels = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+  const badges = [...page.document.querySelectorAll(".attrition-table .risk-badge")];
+  return levels.map(level => badges.filter(badge => badge.textContent?.trim() === level).length);
+}
 export function PageUI({
   page,
   refresh,
@@ -430,6 +436,10 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
   if (!(node instanceof Element)) return null;
   const element = node as HTMLElement;
   const tag = element.tagName.toLowerCase();
+  if (element.matches(".risk-donut")) {
+    const counts = displayedRiskCounts(ui.page);
+    if (counts.length === 4) return <RiskDonut key={key} counts={counts}>{[...element.childNodes].map((child, i) => render(child, ui, i))}</RiskDonut>;
+  }
   const visibleCard = (card: HTMLElement) => {
     const search = (ui.filters?.taskSearch || "")
       .trim()
@@ -720,6 +730,15 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
     if (!href) props.role = "presentation";
   }
   if (element.matches(".btn-close")) children = <X size={20} />;
+  if (element.matches(".risk-legend dd")) {
+    const level = element.parentElement?.querySelector("dt")?.textContent?.trim() || "";
+    children = displayedRiskCounts(ui.page)[["LOW", "MEDIUM", "HIGH", "CRITICAL"].indexOf(level)] ?? 0;
+  }
+  if (element.matches(".alert")) {
+    const Icon = element.matches(".alert-success") ? CheckCircle : element.matches(".alert-danger,.alert-warning") ? Warning : Info;
+    props.className = `${props.className || ""} ui-alert`;
+    children = <><Icon size={20} aria-hidden /><div className="feedback-copy">{children}</div></>;
+  }
   if (element.matches(".kanban-column-header .badge")) {
     children = [
       ...element
