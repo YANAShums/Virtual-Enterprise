@@ -386,6 +386,21 @@ input:user-invalid, select:user-invalid, textarea:user-invalid, .is-invalid, [ar
 .kit-toast { background: var(--color-success-soft); color: var(--color-success-text); border: 1px solid var(--color-success); }
 .kit-toast .btn { color: var(--color-success-text); }
 .kit-toast .icon-button { color: var(--color-success-text); }
+.alert-success, .kit-toast { background: var(--color-confirm-surface); border: 1px solid var(--color-lime); color: var(--color-on-dark); }
+.alert-success :is(strong, small, .small, .text-secondary), .kit-toast .btn, .kit-toast .icon-button { color: var(--color-on-dark); }
+.alert-success > svg { color: var(--color-lime); }
+.risk-distribution .risk-dot.risk-low { background: var(--color-risk-low-chart); }
+.risk-distribution .risk-dot.risk-medium { background: var(--color-risk-medium-chart); }
+.risk-distribution .risk-dot.risk-high { background: var(--color-risk-high-chart); }
+.risk-distribution .risk-dot.risk-critical { background: var(--color-risk-critical-chart); }
+.risk-distribution .risk-donut { width: 164px; height: 164px; background: var(--color-divider); }
+.risk-distribution .risk-donut::before { inset: 20px; }
+.risk-distribution .risk-donut small { font-size: 12px; }
+.risk-distribution .risk-legend { max-width: 220px; }
+.risk-distribution .risk-legend > div { padding: 10px 0; border-bottom: 1px solid var(--color-divider); }
+.risk-distribution .risk-legend dt { font-size: 12px; }
+.risk-distribution .risk-legend dd { font: 500 14px var(--font-data); }
+.risk-distribution .risk-dot { width: 9px; height: 9px; }
 .kit-dropdown { position: relative; }
 .kit-dropdown > summary { list-style: none; }
 .kit-dropdown-menu { position: absolute; top: calc(100% + 8px); left: 0; min-width: 220px; z-index: var(--z-header); padding: var(--space-2); background: var(--color-surface-elevated); border: 1px solid var(--color-border); box-shadow: var(--shadow-floating); border-radius: var(--radius-control); }

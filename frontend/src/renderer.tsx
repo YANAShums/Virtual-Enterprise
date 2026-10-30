@@ -502,7 +502,7 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
     element.style.background.startsWith("conic-gradient")
   ) {
     // Keep server-calculated stops; map presentation colors to the shared tokens.
-    const colors = ["--color-success", "--color-warning", "--color-danger", "--color-danger-critical"];
+    const colors = ["--color-risk-low-chart", "--color-risk-medium-chart", "--color-risk-high-chart", "--color-risk-critical-chart"];
     let index = 0;
     props.style = { background: element.style.background.replace(/#[0-9a-f]{3,8}\b|rgb\([^)]*\)/gi, () => `var(${colors[index++] || "--color-divider"})`) };
   }
