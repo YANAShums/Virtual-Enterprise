@@ -39,6 +39,7 @@ import { downloadFile, fetchPage, submitForm } from "./api";
 import type { Page } from "./api";
 import { PageContent } from "./pages";
 import { Render } from "./renderer";
+import { Alert, Skeleton } from "./ui";
 import { DesignSystem } from "./design-system";
 import "./tokens.css";
 import "./styles.css";
@@ -315,7 +316,7 @@ function App() {
         tabIndex={-1}
       >
         {message && (
-          <div className="alert alert-danger" role="alert">
+          <Alert tone="danger">
             {message}
             <button
               className="icon-button"
@@ -324,13 +325,10 @@ function App() {
             >
               <X size={16} />
             </button>
-          </div>
+          </Alert>
         )}
         {(query.isPending || waitForForm) && (
-          <div className="page-loading" role="status">
-            <span className="loading-mark" />
-            Загружаем пространство…
-          </div>
+          <Skeleton label="Загружаем рабочее пространство…" />
         )}
         {query.isError && (
           <div className="error-state">

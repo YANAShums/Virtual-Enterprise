@@ -1,6 +1,6 @@
 # Интерфейс FlowStaff
 
-React 19 + TypeScript + Vite. Тема Black × Lilac × Lime, локальные Suisse Intl и JetBrains Mono, Phosphor Icons; диалоги Radix, навигация React Router, загрузка TanStack Query.
+React 19 + TypeScript + Vite. Тема Graphite × Lime × Lilac × Dust Blue, локальные Suisse Intl / Onest и JetBrains Mono, Phosphor Icons; диалоги Radix, навигация React Router, загрузка TanStack Query.
 
 ## Запуск и сборка
 

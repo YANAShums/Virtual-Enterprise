@@ -14,6 +14,25 @@ import {
   Check,
   CheckCircle,
   Circle,
+  Archive,
+  BellSlash,
+  ChartLine,
+  ChartPie,
+  Clock,
+  Database,
+  FileMagnifyingGlass,
+  Gauge,
+  Tray,
+  Info,
+  Plus,
+  ShieldCheck,
+  ShieldWarning,
+  SlidersHorizontal,
+  Sparkle,
+  TrendUp,
+  TrendDown,
+  Users,
+  Warning,
   PencilSimple,
   TrashSimple,
   X,
@@ -33,6 +52,7 @@ type UI = {
   status: (record: Element, target: string) => Promise<void>;
   drag: Element | null;
   setDrag: (record: Element | null) => void;
+  selectedDay: string | null;
 };
 const Context = createContext<UI>(null!);
 export function PageUI({
@@ -74,6 +94,7 @@ export function PageUI({
       : null,
   );
   const [notice, setNotice] = useState("");
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const draggedRecord = useRef<Element | null>(null);
   const [pending, setPending] = useState(false);
   const opener = useRef<HTMLElement | null>(null);
@@ -139,8 +160,10 @@ export function PageUI({
     },
     open: (id, data) => {
       opener.current = document.activeElement as HTMLElement;
+      if (id === "dayDetails") setSelectedDay(`${data?.employeeId}:${data?.date}`);
       setModal({ id, data });
     },
+    selectedDay,
     status,
     get drag() {
       return draggedRecord.current;
@@ -338,6 +361,28 @@ const icons: Record<
   "arrow-up-right": ArrowUpRight,
   "panel-right-open": ArrowUpRight,
   "circle-check": CheckCircle,
+  "inbox": Tray,
+  "bell-off": BellSlash,
+  "file-search": FileMagnifyingGlass,
+  "shield-question": ShieldWarning,
+  "shield-alert": ShieldWarning,
+  "shield-check": ShieldCheck,
+  "info": Info,
+  "gauge": Gauge,
+  "clock": Clock,
+  "triangle-alert": Warning,
+  "chart-spline": ChartLine,
+  "chart-pie": ChartPie,
+  "chart-no-axes-combined": ChartLine,
+  "users": Users,
+  "users-round": Users,
+  "sliders-horizontal": SlidersHorizontal,
+  "sparkles": Sparkle,
+  "database": Database,
+  "plus": Plus,
+  "archive": Archive,
+  "trending-up": TrendUp,
+  "trending-down": TrendDown,
 };
 const booleanAttributes = new Set([
   "disabled",
@@ -442,7 +487,7 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
       ? attr.value !== "false"
       : attr.value;
   }
-  if (["td", "dd", "time", "code"].includes(tag) && !element.children.length && /^\s*(?:[#v]?[\d]+[\d\s.,:/%\-]*|[A-Z]{2,}[-_]\d+)\s*(?:ч|дн\.?)?\s*$/.test(element.textContent || "")) {
+  if (["td", "dd", "time", "code", "strong"].includes(tag) && !element.children.length && /^\s*(?:[#v]?[\d]+[\d\s.,:/%\-]*|[A-Z]{2,}[-_]\d+)\s*(?:ч|дн\.?)?\s*$/.test(element.textContent || "")) {
     props.className = `${props.className || ""} data`;
   }
   if (
@@ -455,12 +500,25 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
   if (
     element.matches(".risk-donut") &&
     element.style.background.startsWith("conic-gradient")
-  )
-    props.style = { background: element.style.background };
+  ) {
+    // Keep server-calculated stops; map presentation colors to the shared tokens.
+    const colors = ["--color-success", "--color-warning", "--color-danger", "--color-danger-critical"];
+    let index = 0;
+    props.style = { background: element.style.background.replace(/#[0-9a-f]{3,8}\b|rgb\([^)]*\)/gi, () => `var(${colors[index++] || "--color-divider"})`) };
+  }
   if (element.matches(".history-risk-bar"))
     props.style = { height: element.style.height };
   if (element.matches(".history-load-marker"))
     props.style = { bottom: element.style.bottom };
+  if (element.matches(".day-cell[data-date]")) {
+    props["aria-pressed"] = ui.selectedDay === `${element.dataset.employeeId}:${element.dataset.date}`;
+    props["aria-label"] = `${element.dataset.employee || ""}, ${element.getAttribute("aria-label") || element.dataset.date}, ${loadLabels[element.dataset.status || ""] || ""}`;
+    const today = new Date().toLocaleDateString("en-CA");
+    if (element.dataset.date === today) {
+      props.className = `${props.className || ""} is-today`;
+      props["aria-current"] = "date";
+    }
+  }
   if (tag === "input") {
     if (element.getAttribute("type") !== "file")
       props.defaultValue = (element as HTMLInputElement).value;
@@ -636,6 +694,18 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
     tag === "input" || tag === "textarea" || ["br", "hr", "img"].includes(tag)
       ? undefined
       : [...node.childNodes].map((child, index) => render(child, ui, index));
+  if (element.matches(".section-note") && element.textContent?.includes("Бирюзовый — вероятность ухода")) {
+    children = "Lilac — вероятность ухода · Dust Blue — загрузка";
+  }
+  if (element.matches(".empty-state")) {
+    props.className = `${props.className || ""} system-empty`;
+    if (!element.querySelector(".empty-icon, i[data-lucide]")) children = <><span className="empty-symbol"><Tray size={24} aria-hidden /></span>{children}</>;
+    const action = ui.page.document.querySelector<HTMLAnchorElement>("main .page-heading a.btn-primary");
+    if (action && !element.querySelector("a,button")) children = <>{children}<Link className="btn btn-secondary" to={action.getAttribute("href")!}>{action.textContent?.trim()}<ArrowRight size={16} aria-hidden /></Link></>;
+  }
+  if (element.matches(".badge.text-bg-warning") && /Высок|Критич/.test(element.textContent || "")) {
+    props.className = String(props.className).replace("text-bg-warning", "text-bg-danger");
+  }
   if (tag === "a") {
     if (element.closest(".task-card")) props.draggable = false;
     const href = element.getAttribute("href");

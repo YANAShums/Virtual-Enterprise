@@ -4,6 +4,7 @@ import { ArrowRight, ArrowUpRight, Eye, EyeSlash, CirclesThreePlus } from "@phos
 import type { Page } from "./api";
 import { PageUI, Render } from "./renderer";
 import { Overview } from "./overview";
+import { Empty } from "./ui";
 import { People } from "./people";
 
 type Props = { page: Page; refresh: () => unknown };
@@ -213,16 +214,9 @@ function Projects(props: Props) {
         })}
       </div>}
       {!visible.length && (
-        <div className="empty-state">
-          <h2>
-            {rows.length ? "Ничего не найдено" : "Первый проект — впереди"}
-          </h2>
-          <p>
-            {rows.length
-              ? "Попробуйте изменить запрос."
-              : "Создайте проект, чтобы собрать команду и начать работу."}
-          </p>
-        </div>
+        <Empty title={rows.length ? "Ничего не найдено" : "Первый проект — впереди"}>
+          {rows.length ? "Измените поисковый запрос, чтобы увидеть проекты." : "Проекты появятся в списке после создания. Доступные действия указаны вверху страницы."}
+        </Empty>
       )}
     </div>
   );

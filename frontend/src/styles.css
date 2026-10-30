@@ -479,7 +479,7 @@ dd {
   border-radius: 14px;
   padding: 19px;
   z-index: 60;
-  box-shadow: 0 15px 50px #063b2b20;
+  box-shadow: var(--shadow-floating);
 }
 .account-menu strong,
 .account-menu small {
@@ -2158,7 +2158,7 @@ dd {
   border-radius: 19px;
   z-index: 81;
   overflow-y: auto;
-  box-shadow: -20px 0 70px #063b2b25;
+  box-shadow: var(--shadow-floating);
   animation: slide-in 0.2s;
 }
 .drawer > h2 {
@@ -2238,7 +2238,7 @@ dd {
   padding: 11px 20px;
   border-radius: 100px;
   font-size: 12px;
-  box-shadow: 0 5px 35px #0008;
+  box-shadow: var(--shadow-floating);
 }
 .error-state {
   max-width: 560px;
