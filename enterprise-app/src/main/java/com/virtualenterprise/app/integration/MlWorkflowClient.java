@@ -5,9 +5,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import java.util.List;
@@ -25,11 +23,8 @@ public class MlWorkflowClient {
     public Candidate activate(String version) { return client.post().uri("/internal/v2/models/{version}/activate", version)
             .retrieve().body(Candidate.class); }
     public Map<String,Object> importCsv(String filename, byte[] data) {
-        MultipartBodyBuilder body = new MultipartBodyBuilder();
-        body.part("file", new ByteArrayResource(data) { @Override public String getFilename() { return filename; } })
-                .contentType(MediaType.parseMediaType("text/csv"));
         return client.post().uri("/internal/v2/imports/csv").contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(body.build()).retrieve().body(new ParameterizedTypeReference<Map<String,Object>>() {});
+                .body(CsvMultipartBody.create(filename, data)).retrieve().body(new ParameterizedTypeReference<Map<String,Object>>() {});
     }
     public Map<String,Object> sync() { return client.post().uri("/internal/v2/snapshots/sync-project").retrieve()
             .body(new ParameterizedTypeReference<Map<String,Object>>() {}); }

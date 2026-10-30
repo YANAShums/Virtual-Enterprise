@@ -4,9 +4,7 @@ import com.virtualenterprise.app.attrition.features.AttritionFeatureSnapshot;
 import com.virtualenterprise.app.config.MlClientProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -45,13 +43,9 @@ public class AttritionMlClient implements AttritionPredictionGateway {
     }
 
     public MlImportResult importDataset(String filename, byte[] content) {
-        MultipartBodyBuilder body = new MultipartBodyBuilder();
-        body.part("file", new ByteArrayResource(content) {
-            @Override public String getFilename() { return filename; }
-        }).contentType(MediaType.parseMediaType("text/csv"));
         return client.post().uri("/internal/v1/datasets/import")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(body.build())
+                .body(CsvMultipartBody.create(filename, content))
                 .retrieve().body(MlImportResult.class);
     }
 
