@@ -8,12 +8,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TaskViewServiceTest {
+    private final com.virtualenterprise.app.security.AccessScopeService scope=org.mockito.Mockito.mock(com.virtualenterprise.app.security.AccessScopeService.class, invocation -> invocation.getMethod().getReturnType()==boolean.class ? true : org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation));
     private final TaskRepository tasks=mock(TaskRepository.class);
     private final ProjectRepository projects=mock(ProjectRepository.class);
     private final TaskStatusRepository statuses=mock(TaskStatusRepository.class);
     private final TaskCommentRepository comments=mock(TaskCommentRepository.class);
     private final TaskChecklistItemRepository checklist=mock(TaskChecklistItemRepository.class);
-    private final TaskViewService service=new TaskViewService(tasks,projects,statuses,comments,checklist);
+    private final TaskViewService service=new TaskViewService(tasks,projects,statuses,comments,checklist,scope);
 
     private Task task(String title, String statusCode, String username, boolean overdue) {
         Task task=new Task(); task.setTitle(title); task.setTaskNumber("TEST-1"); task.setOverdue(overdue);

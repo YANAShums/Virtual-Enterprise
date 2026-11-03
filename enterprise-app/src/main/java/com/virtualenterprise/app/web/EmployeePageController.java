@@ -17,12 +17,14 @@ import java.util.stream.Collectors;
 
 @Controller
 public class EmployeePageController {
+    private final com.virtualenterprise.app.security.AccessScopeService scope;
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final WorkloadContextService workloadService;
 
     public EmployeePageController(EmployeeRepository employeeRepository,DepartmentRepository departmentRepository,
-                                  WorkloadContextService workloadService) {
+                                  WorkloadContextService workloadService, com.virtualenterprise.app.security.AccessScopeService scope) {
+        this.scope=scope;
         this.employeeRepository=employeeRepository; this.departmentRepository=departmentRepository;
         this.workloadService=workloadService;
     }
@@ -37,6 +39,7 @@ public class EmployeePageController {
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         boolean includeArchived=admin && showArchived;
         List<Employee> list=new ArrayList<>(loadEmployees(departmentId,includeArchived));
+        list.removeIf(e -> !scope.canViewEmployee(e.getId()));
         List<Employee> active=list.stream().filter(Employee::isActive).toList();
         Map<Long,CandidateWorkloadResult> loadByEmployee=new HashMap<>();
         try {

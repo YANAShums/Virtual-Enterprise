@@ -24,12 +24,14 @@ public class WorkloadContextService {
     private final EmployeeSkillRepository employeeSkillRepository;
     private final SkillRepository skillRepository;
     private final WorkloadClient client;
+    private final com.virtualenterprise.app.security.AccessScopeService scope;
 
     public WorkloadContextService(ProjectRepository projectRepository, ProjectMemberRepository memberRepository,
                                   EmployeeRepository employeeRepository, EmployeeAbsenceRepository absenceRepository,
                                   TaskRepository taskRepository, ProductionCalendarDayRepository calendarRepository,
                                   EmployeeSkillRepository employeeSkillRepository, SkillRepository skillRepository,
-                                  WorkloadClient client) {
+                                  WorkloadClient client,com.virtualenterprise.app.security.AccessScopeService scope) {
+        this.scope=scope;
         this.projectRepository = projectRepository;
         this.memberRepository = memberRepository;
         this.employeeRepository = employeeRepository;
@@ -42,18 +44,21 @@ public class WorkloadContextService {
     }
 
     @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canCreateTask(#projectId)")
     public WorkloadEvaluationResponse preview(Long projectId, LocalDate start, LocalDate end,
                                                BigDecimal hours, List<Long> candidateIds) {
         return preview(projectId,start,end,hours,candidateIds,List.of());
     }
 
     @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canCreateTask(#projectId)")
     public WorkloadEvaluationResponse preview(Long projectId, LocalDate start, LocalDate end,
                                                BigDecimal hours, List<Long> candidateIds, List<Long> requiredSkillIds) {
         return preview(projectId,start,end,hours,candidateIds,requiredSkillIds,null);
     }
 
     @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canCreateTask(#projectId)")
     public WorkloadEvaluationResponse preview(Long projectId, LocalDate start, LocalDate end,
                                                BigDecimal hours, List<Long> candidateIds, List<Long> requiredSkillIds,
                                                Long excludedTaskId) {
@@ -67,14 +72,19 @@ public class WorkloadContextService {
         }
         Set<Long> memberIds = memberRepository.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(projectId)
                 .stream().map(m -> m.getEmployee().getId()).collect(java.util.stream.Collectors.toSet());
+        if(scope.has("DEPARTMENT_MANAGER")) employeeRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc().stream()
+                .filter(e -> scope.canAssignEmployee(projectId,e.getId())).map(Employee::getId).forEach(memberIds::add);
         List<Employee> candidates;
+        if(candidateIds!=null && !memberIds.containsAll(candidateIds)) {
+            throw new AppException(org.springframework.http.HttpStatus.FORBIDDEN,"ACCESS_DENIED","Исполнители должны входить в команду проекта");
+        }
         if (candidateIds != null && !candidateIds.isEmpty()) {
             candidates = candidateIds.stream().map(id -> employeeRepository.findById(id)
                     .orElseThrow(() -> new NoSuchElementException("Сотрудник не найден: " + id))).toList();
         } else if (!memberIds.isEmpty()) {
             candidates = memberIds.stream().map(id -> employeeRepository.findById(id).orElseThrow()).toList();
         } else {
-            candidates = employeeRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc();
+            candidates = List.of();
         }
         List<CandidateContext> contexts = candidates.stream()
                 .filter(Employee::isActive)
@@ -96,6 +106,11 @@ public class WorkloadContextService {
         return client.history(employeeId, from, to);
     }
 
+    private boolean visibleTask(Task task) {
+        var auth=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return auth==null || scope.canViewTask(task.getId());
+    }
+
     private CandidateContext toContext(Employee e, boolean projectMember, LocalDate start, LocalDate end, Set<Long> requiredSkills, Long excludedTaskId) {
         Map<Integer, BigDecimal> schedule = new HashMap<>();
         for (WorkScheduleDay day : e.getWorkSchedule().getDays()) {
@@ -103,7 +118,7 @@ public class WorkloadContextService {
         }
         List<ExistingTask> tasks = taskRepository.findByAssigneeIdAndStatusCodeIn(e.getId(), ACTIVE_STATUSES).stream()
                 .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
-                .map(t -> new ExistingTask(t.getId(), t.getTaskNumber(), t.getTitle(),
+                .map(t -> new ExistingTask(t.getId(), visibleTask(t) ? t.getTaskNumber() : null, visibleTask(t) ? t.getTitle() : null,
                         t.getPlannedStartDate() == null ? t.getPlannedEndDate() : t.getPlannedStartDate(),
                         t.getPlannedEndDate(), t.getPlannedHours(), t.getActualHours(), t.getStatus().getCode()))
                 .toList();

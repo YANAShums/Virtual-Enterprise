@@ -26,6 +26,7 @@ public class TaskCollaborationService {
         this.currentUser=currentUser;this.employees=employees;this.audit=audit;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canContributeTask(#taskId)")
     public Long addComment(Long taskId,String body){
         Task task=requireTask(taskId);AppUser user=currentUser.requireCurrentUser();
         AdminRules.check(body!=null&&!body.isBlank(),"Комментарий не может быть пустым");
@@ -35,6 +36,7 @@ public class TaskCollaborationService {
         return comment.getId();
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canManageTask(#taskId)")
     public Long addChecklistItem(Long taskId,String title){
         Task task=requireTask(taskId);AppUser user=currentUser.requireCurrentUser();
         AdminRules.check(title!=null&&!title.isBlank(),"Пункт чек-листа не может быть пустым");
@@ -45,6 +47,7 @@ public class TaskCollaborationService {
         return item.getId();
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canContributeTask(#taskId)")
     public void toggleChecklistItem(Long taskId,Long itemId,Long version){
         Task task=requireTask(taskId);TaskChecklistItem item=requireItem(taskId,itemId);
         AdminRules.version(item.getVersion(),version);AppUser user=currentUser.requireCurrentUser();
@@ -55,6 +58,7 @@ public class TaskCollaborationService {
                 Map.of("completed",!next),Map.of("completed",next,"taskId",taskId));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canManageTask(#taskId)")
     public void deleteChecklistItem(Long taskId,Long itemId,Long version){
         requireTask(taskId);TaskChecklistItem item=requireItem(taskId,itemId);AdminRules.version(item.getVersion(),version);
         audit.record("TASK_CHECKLIST_REMOVED","TASK_CHECKLIST_ITEM",item.getId(),Map.of("taskId",taskId,"title",item.getTitle()),null);
@@ -62,7 +66,7 @@ public class TaskCollaborationService {
     }
 
     private void ensureEmployeeCanChangeOwnTask(Task task,AppUser user){
-        boolean onlyEmployee=user.getRoles().stream().allMatch(role -> "EMPLOYEE".equals(role.getCode()));
+        boolean onlyEmployee=user.getRoles().stream().anyMatch(role -> role.isActive() && "EMPLOYEE".equals(role.getCode())) && user.getRoles().stream().noneMatch(role -> role.isActive() && Set.of("ADMIN","ENTERPRISE_MANAGER","DEPARTMENT_MANAGER","PROJECT_MANAGER").contains(role.getCode()));
         if(!onlyEmployee)return;
         Employee employee=employees.findByUserId(user.getId()).orElse(null);
         if(employee==null||task.getAssignee()==null||!Objects.equals(task.getAssignee().getId(),employee.getId()))

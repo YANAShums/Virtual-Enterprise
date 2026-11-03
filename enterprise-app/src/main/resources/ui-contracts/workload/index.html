@@ -9,11 +9,12 @@
     <div th:if="${workloadError}" class="alert alert-danger" th:text="${workloadError}"></div>
 
     <div class="dashboard-stats" aria-label="Сводка за выбранный период">
-<div class="dashboard-stat"><i data-lucide="users" class="kpi-icon" aria-hidden="true"></i><strong th:text="${#lists.size(results)}"></strong><span>Сотрудников в расчёте</span></div>
-<div class="dashboard-stat"><i data-lucide="triangle-alert" class="kpi-icon" aria-hidden="true"></i><strong th:text="${#lists.size(results.?[status.name() == 'CRITICAL'])}"></strong><span>Критическая загрузка</span></div>
-<div class="dashboard-stat"><i data-lucide="clock" class="kpi-icon" aria-hidden="true"></i><strong th:text="${#lists.size(results.?[status.name() == 'WARNING'])}"></strong><span>Повышенная загрузка</span></div>
-<div class="dashboard-stat"><i data-lucide="circle-check" class="kpi-icon" aria-hidden="true"></i><strong th:text="${#lists.size(results.?[status.name() == 'NORMAL'])}"></strong><span>В пределах нормы</span></div></div>
-    <div class="workload-view">
+<div class="dashboard-stat"><i data-lucide="users" class="kpi-icon" aria-hidden="true"></i><strong th:text="${summaryCount ?: 0}"></strong><span>Сотрудников в расчёте</span></div>
+<div class="dashboard-stat"><i data-lucide="triangle-alert" class="kpi-icon" aria-hidden="true"></i><strong th:text="${summaryCritical ?: 0}"></strong><span>Критическая загрузка</span></div>
+<div class="dashboard-stat"><i data-lucide="clock" class="kpi-icon" aria-hidden="true"></i><strong th:text="${summaryWarning ?: 0}"></strong><span>Повышенная загрузка</span></div>
+<div class="dashboard-stat"><i data-lucide="circle-check" class="kpi-icon" aria-hidden="true"></i><strong th:text="${summaryNormal ?: 0}"></strong><span>В пределах нормы</span></div></div>
+    <p th:if="${aggregateOnly}" class="text-secondary">Сводка по участникам доступных проектов. Персональные сведения и детализация скрыты.</p>
+    <div class="workload-view" th:unless="${aggregateOnly}">
         <div th:replace="~{fragments/ui :: legend}"></div>
         <p class="scroll-hint"><i data-lucide="arrow-left-right" class="" aria-hidden="true"></i>Прокрутите вправо, чтобы увидеть весь период</p>
         <div class="card-body p-0"><div class="table-responsive"><table class="table align-middle workload-table mb-0">

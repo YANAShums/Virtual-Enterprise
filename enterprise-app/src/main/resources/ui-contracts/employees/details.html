@@ -26,9 +26,9 @@
         <button id="profileTab" class="active" role="tab" data-tab-target="profileOverview" aria-controls="profileOverview" aria-selected="true">Обзор</button>
         <button id="tasksTab" role="tab" data-tab-target="employeeTasks" aria-controls="employeeTasks" aria-selected="false">Задачи</button>
         <button id="scheduleTab" role="tab" data-tab-target="employeeSchedule" aria-controls="employeeSchedule" aria-selected="false">График</button>
-        <button id="absenceTab" role="tab" data-tab-target="employeeAbsences" aria-controls="employeeAbsences" aria-selected="false">Отсутствия</button><button id="skillsTab" role="tab" data-tab-target="employeeSkills" aria-controls="employeeSkills" aria-selected="false">Навыки</button>
+        <button th:if="${@accessScopeService.canViewPersonnel(employee.id)}" id="absenceTab" role="tab" data-tab-target="employeeAbsences" aria-controls="employeeAbsences" aria-selected="false">Отсутствия</button><button id="skillsTab" role="tab" data-tab-target="employeeSkills" aria-controls="employeeSkills" aria-selected="false">Навыки</button>
         <button th:if="${canViewAttrition}" id="attritionTab" role="tab" data-tab-target="employeeAttrition" aria-controls="employeeAttrition" aria-selected="false">Текучесть</button>
-        <button id="historyTab" role="tab" data-tab-target="employeeHistory" aria-controls="employeeHistory" aria-selected="false">Кадровая история</button>
+        <button th:if="${@accessScopeService.canViewPersonnel(employee.id)}" id="historyTab" role="tab" data-tab-target="employeeHistory" aria-controls="employeeHistory" aria-selected="false">Кадровая история</button>
     </div>
 
     <div class="profile-panels">
@@ -40,7 +40,7 @@
                     <dt>Должность</dt><dd th:text="${employee.position.name}"></dd>
                     <dt>Руководитель</dt><dd th:text="${employee.manager != null ? employee.manager.fullName : 'Не назначен'}"></dd>
                 </dl></section>
-                <section class="detail-section"><h2>Условия работы</h2><dl class="detail-list">
+                <section th:if="${@accessScopeService.canViewPersonnel(employee.id)}" class="detail-section"><h2>Условия работы</h2><dl class="detail-list">
                     <dt>Дата приёма</dt><dd th:text="${#temporals.format(employee.hireDate,'dd.MM.yyyy')}"></dd>
                     <dt>Статус</dt><dd><span th:replace="~{fragments/ui :: employeeStatus(${employee.status})}"></span></dd>
                     <dt>График</dt><dd th:text="${employee.workSchedule.name}"></dd>
@@ -71,7 +71,7 @@
         <section id="employeeSchedule" role="tabpanel" aria-labelledby="scheduleTab" data-tab-panel hidden>
             <h2 class="mb-4" th:text="${employee.workSchedule.name}"></h2>
             <div class="d-flex flex-wrap gap-2"><div class="day-cell" th:each="day:${employee.workSchedule.days}" th:classappend="${day.workingDay ? 'workload-bg-normal' : 'workload-bg-unavailable'}"><span th:text="${{'Пн','Вт','Ср','Чт','Пт','Сб','Вс'}[day.dayOfWeek - 1]}"></span><strong th:text="${day.plannedHours+' ч'}"></strong><span th:text="${day.workingDay ? 'Рабочий' : 'Выходной'}"></span></div></div>
-        </section>        <section id="employeeAbsences" role="tabpanel" aria-labelledby="absenceTab" data-tab-panel hidden>
+        </section>        <section th:if="${@accessScopeService.canViewPersonnel(employee.id)}" id="employeeAbsences" role="tabpanel" aria-labelledby="absenceTab" data-tab-panel hidden>
             <div class="widget-heading"><div><p class="eyebrow">КАДРОВЫЕ ПЕРИОДЫ</p><h2>Отсутствия</h2></div><a sec:authorize="hasRole('ADMIN')" class="btn btn-sm btn-primary" th:href="@{/employees/{id}/absences/new(id=${employee.id})}"><i data-lucide="plus" class="me-1" aria-hidden="true"></i>Добавить</a></div>
             <p th:if="${absenceHistory == null or #lists.isEmpty(absenceHistory)}" class="text-secondary">Отсутствия сотрудника ещё не зарегистрированы.</p>
             <div class="record-list" th:if="${absenceHistory != null}">
@@ -103,7 +103,7 @@
             <div th:if="${!#lists.isEmpty(attrition.recommendations)}" class="detail-section"><h3>Рекомендации руководителю</h3><ul class="recommendation-list"><li th:each="item:${attrition.recommendations}"><i data-lucide="lightbulb" aria-hidden="true"></i><span th:text="${item}"></span></li></ul></div>
             <p class="decision-note"><i data-lucide="info" aria-hidden="true"></i>Прогноз носит рекомендательный характер и не является основанием для автоматического кадрового решения.</p>
         </section>
-        <section id="employeeHistory" role="tabpanel" aria-labelledby="historyTab" data-tab-panel hidden class="history-grid">
+        <section th:if="${@accessScopeService.canViewPersonnel(employee.id)}" id="employeeHistory" role="tabpanel" aria-labelledby="historyTab" data-tab-panel hidden class="history-grid">
             <div class="detail-section">
                 <div class="section-heading"><div><p class="eyebrow">НАЗНАЧЕНИЯ</p><h2>Подразделения и должности</h2></div></div>
                 <p th:if="${assignmentHistory == null or #lists.isEmpty(assignmentHistory)}" class="text-secondary">История назначений пока отсутствует.</p>

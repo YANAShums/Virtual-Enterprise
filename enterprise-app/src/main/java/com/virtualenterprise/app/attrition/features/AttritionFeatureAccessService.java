@@ -20,6 +20,7 @@ public class AttritionFeatureAccessService {
     }
 
     @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canViewAttrition(#employeeId)")
     public void assertCanView(Long employeeId) {
         AppUser user = currentUsers.requireCurrentUser();
         if (hasRole(user, "ADMIN") || hasRole(user, "ENTERPRISE_MANAGER")) {
@@ -49,8 +50,17 @@ public class AttritionFeatureAccessService {
                 .orElseThrow(() -> forbidden("Для пользователя не найден профиль сотрудника"));
     }
 
+    @Transactional(readOnly = true)
+    public Long visibleEnterpriseId() {
+        AppUser user=currentUsers.requireCurrentUser();
+        if(hasRole(user,"ADMIN")) return null;
+        if(!hasRole(user,"ENTERPRISE_MANAGER") && !hasRole(user,"DEPARTMENT_MANAGER")) throw forbidden("Нет доступа к кадровым прогнозам");
+        return employees.findByUserId(user.getId()).map(e -> e.getEnterprise().getId())
+                .orElseThrow(() -> forbidden("Для пользователя не найден профиль сотрудника"));
+    }
+
     private boolean hasRole(AppUser user, String code) {
-        return user.getRoles().stream().anyMatch(role -> code.equals(role.getCode()));
+        return user.getRoles().stream().anyMatch(role -> role.isActive() && code.equals(role.getCode()));
     }
 
     private AppException forbidden(String message) {

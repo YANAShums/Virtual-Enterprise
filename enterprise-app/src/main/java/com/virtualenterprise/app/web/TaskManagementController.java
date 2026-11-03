@@ -17,7 +17,10 @@ public class TaskManagementController {
     private final TaskService service;
     private final ProjectMemberRepository members;
     private final TaskPriorityRepository priorities;
-    public TaskManagementController(TaskService service,ProjectMemberRepository members,TaskPriorityRepository priorities){
+    private final EmployeeRepository employees;
+    private final com.virtualenterprise.app.security.AccessScopeService scope;
+    public TaskManagementController(TaskService service,ProjectMemberRepository members,TaskPriorityRepository priorities,EmployeeRepository employees,com.virtualenterprise.app.security.AccessScopeService scope){
+        this.employees=employees;this.scope=scope;
         this.service=service;this.members=members;this.priorities=priorities;
     }
     @GetMapping("/{id:[0-9]+}/edit")
@@ -25,13 +28,14 @@ public class TaskManagementController {
         TaskEditForm form=service.form(id);model.addAttribute("taskForm",form);prepare(model,id,form);return "tasks/form";
     }
     @PostMapping("/{id:[0-9]+}")
+    @PreAuthorize("@accessScopeService.canManageTask(#id) and @accessScopeService.canCreateTask(#form.projectId)")
     String update(@PathVariable Long id,@Valid @ModelAttribute("taskForm") TaskEditForm form,BindingResult errors,Model model){
         if(errors.hasErrors()){prepare(model,id,form);return "tasks/form";}
         try{service.update(id,form);return "redirect:/tasks/"+id+"?updated";}
         catch(AppException ex){model.addAttribute("formError",ex.getMessage());prepare(model,id,form);return "tasks/form";}
     }
     private void prepare(Model model,Long id,TaskEditForm form){
-        model.addAttribute("taskId",id);model.addAttribute("members",members.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(form.getProjectId()));
+        model.addAttribute("taskId",id);model.addAttribute("assignees",employees.findByActiveTrueOrderByLastNameAscFirstNameAsc().stream().filter(e -> scope.canAssignEmployee(form.getProjectId(),e.getId())).toList());
         model.addAttribute("priorities",priorities.findByActiveTrueOrderByWeightAsc());
     }
 }

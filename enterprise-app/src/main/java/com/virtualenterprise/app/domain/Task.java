@@ -62,6 +62,7 @@ public class Task {
     public LocalDateTime getActualEndAt() { return actualEndAt; }
     public BigDecimal getPlannedHours() { return plannedHours; }
     public BigDecimal getActualHours() { return actualHours; }
+    public void setActualHours(BigDecimal value) { this.actualHours=value; }
     public boolean isOverdue() { return overdue; }
     public boolean isOverloadConfirmed() { return overloadConfirmed; }
     public BigDecimal getKanbanOrder() { return kanbanOrder; }

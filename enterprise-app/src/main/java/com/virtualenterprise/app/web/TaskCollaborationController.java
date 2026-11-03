@@ -15,7 +15,7 @@ public class TaskCollaborationController {
     public TaskCollaborationController(TaskCollaborationService service){this.service=service;}
 
     @PostMapping("/comments")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@accessScopeService.canContributeTask(#taskId)")
     String comment(@PathVariable Long taskId,@RequestParam @Size(min=1,max=4000) String body){
         service.addComment(taskId,body);return "redirect:/tasks/"+taskId+"#taskComments";
     }

@@ -30,6 +30,7 @@ public class ProjectManagementService {
     }
 
     @Transactional(readOnly=true)
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canManageProject(#id)")
     public ProjectForm form(Long id) {
         Project p=projects.findById(id).orElseThrow(AdminRules::missing);
         ProjectForm f=new ProjectForm();
@@ -41,8 +42,10 @@ public class ProjectManagementService {
         return f;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canCreateProject() and @accessScopeService.canUseProjectTeam(null,#form.managerId,#form.memberIds)")
     public Project create(ProjectForm form){return save(null,form);}
 
+    @org.springframework.security.access.prepost.PreAuthorize("(#id == null ? @accessScopeService.canCreateProject() : @accessScopeService.canManageProject(#id)) and @accessScopeService.canUseProjectTeam(#id,#f.managerId,#f.memberIds)")
     public Project save(Long id,ProjectForm f) {
         validate(f);
         boolean created=id==null;

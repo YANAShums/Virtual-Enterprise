@@ -109,7 +109,7 @@ export function PageUI({
     record: Element;
     target: string;
   } | null>(null);
-  async function update(record: Element, target: string, reason?: string) {
+  async function update(record: Element, target: string, reason?: string, actualHours?: string) {
     if (pending) return;
     setPending(true);
     setNotice("");
@@ -120,6 +120,7 @@ export function PageUI({
           targetStatusCode: target,
           version: Number(record.getAttribute("data-version")),
           comment: reason || null,
+          actualHours: actualHours || null,
           kanbanOrder: Math.floor(Date.now() / 1000),
         }),
       });
@@ -140,6 +141,7 @@ export function PageUI({
       return;
     }
     if (
+      (old === "IN_PROGRESS" && target === "REVIEW") ||
       target === "CANCELLED" ||
       (old === "IN_PROGRESS" && target === "PLANNED") ||
       (old === "REVIEW" && target === "IN_PROGRESS")
@@ -299,9 +301,9 @@ export function PageUI({
               commentOpener.current?.focus();
             }}
           >
-            <Dialog.Title>Изменение статуса</Dialog.Title>
+            <Dialog.Title>{comment?.target === "REVIEW" ? "Завершить выполнение" : "Изменение статуса"}</Dialog.Title>
             <Dialog.Description>
-              Укажите причину. Она сохранится в истории задачи.
+              {comment?.target === "REVIEW" ? "Укажите итоговое общее время работы над задачей, включая доработки. Превышение плана допустимо." : "Укажите причину. Она сохранится в истории задачи."}
             </Dialog.Description>
             <form
               data-react-form
@@ -310,15 +312,16 @@ export function PageUI({
                 const text = String(
                   new FormData(event.currentTarget).get("comment") || "",
                 ).trim();
-                if (text && comment)
-                  void update(comment.record, comment.target, text);
+                if (comment && (text || comment.target === "REVIEW"))
+                  void update(comment.record, comment.target, text, String(new FormData(event.currentTarget).get("actualHours") || ""));
               }}
             >
-              <label htmlFor="statusReason">Причина</label>
+              {comment?.target === "REVIEW" && <><label htmlFor="actualHours">Фактические трудозатраты, ч</label><input id="actualHours" name="actualHours" type="number" min="0.01" max="99999999.99" step="0.01" required defaultValue={Number(comment.record.getAttribute("data-actual-hours")) > 0 ? comment.record.getAttribute("data-actual-hours") || "" : ""} /><p className="form-text">Введите итог, а не дополнительные часы. Например, после доработки 8 часов заменяются на 11,5.</p></>}
+              <label htmlFor="statusReason">{comment?.target === "REVIEW" ? "Комментарий о результате (необязательно)" : "Причина"}</label>
               <textarea
                 id="statusReason"
                 name="comment"
-                required
+                required={comment?.target !== "REVIEW"}
                 maxLength={2000}
                 rows={4}
               />
@@ -327,7 +330,7 @@ export function PageUI({
                   Отмена
                 </Dialog.Close>
                 <button className="btn btn-primary" disabled={pending}>
-                  {pending ? "Сохраняем…" : "Изменить статус"}
+                  {pending ? "Сохраняем…" : comment?.target === "REVIEW" ? "Передать на проверку" : "Изменить статус"}
                 </button>
               </div>
             </form>
@@ -662,7 +665,7 @@ function render(node: Node, ui: UI, key?: number): ReactNode {
   if (tag === "option" && element.closest(".task-status-select")) {
     const current =
       element.closest("[data-task-record]")!.getAttribute("data-status") || "";
-    props.disabled =
+    props.disabled = (element as HTMLOptionElement).disabled ||
       (element as HTMLOptionElement).value !== current &&
       !(transitions[current] || []).includes(
         (element as HTMLOptionElement).value,

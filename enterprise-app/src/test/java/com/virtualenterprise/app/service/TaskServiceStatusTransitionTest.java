@@ -27,7 +27,7 @@ class TaskServiceStatusTransitionTest {
     private final CurrentUserService currentUser=mock(CurrentUserService.class);
     private final JdbcTemplate jdbc=mock(JdbcTemplate.class);
     private final NotificationService notifications=mock(NotificationService.class);
-    private final TaskService service=new TaskService(tasks,projects,members,employees,statuses,priorities,workload,currentUser,jdbc,new ObjectMapper(),notifications);
+    private final TaskService service=new TaskService(tasks,projects,members,employees,statuses,priorities,workload,currentUser,jdbc,new ObjectMapper(),notifications,mock(com.virtualenterprise.app.security.AccessScopeService.class));
     private Task task;
     private TaskStatus planned;
 
@@ -70,4 +70,20 @@ class TaskServiceStatusTransitionTest {
     }
 
     private TaskStatus status(Long id,String code){TaskStatus status=mock(TaskStatus.class);when(status.getId()).thenReturn(id);when(status.getCode()).thenReturn(code);return status;}
+    @Test void reviewRequiresActualHours() {
+        task.setStatus(status(2L,"IN_PROGRESS"));TaskStatus review=status(3L,"REVIEW");when(statuses.findByCode("REVIEW")).thenReturn(Optional.of(review));
+        AppException ex=assertThrows(AppException.class,()->service.changeStatus(12L,new TaskStatusChangeRequest("REVIEW",2L,null,null)));
+        assertEquals("ACTUAL_HOURS_REQUIRED",ex.getCode());verify(tasks,never()).saveAndFlush(any());
+    }
+    @Test void resubmissionReplacesTotalHoursAndDoesNotBlockOverrun() {
+        task.setStatus(status(2L,"IN_PROGRESS"));task.setActualHours(new BigDecimal("8.00"));task.setPlannedHours(new BigDecimal("8"));
+        TaskStatus review=status(3L,"REVIEW");when(statuses.findByCode("REVIEW")).thenReturn(Optional.of(review));
+        Task result=service.changeStatus(12L,new TaskStatusChangeRequest("REVIEW",2L,"Доработано",null,new BigDecimal("20.50")));
+        assertEquals(new BigDecimal("20.50"),result.getActualHours());assertEquals("REVIEW",result.getStatus().getCode());
+    }
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"0","-1","1.001","100000000.00"})
+    void invalidHoursNeverSaved(String hours) {
+        task.setStatus(status(2L,"IN_PROGRESS"));TaskStatus review=status(3L,"REVIEW");when(statuses.findByCode("REVIEW")).thenReturn(Optional.of(review));
+        assertThrows(AppException.class,()->service.changeStatus(12L,new TaskStatusChangeRequest("REVIEW",2L,null,null,new BigDecimal(hours))));verify(tasks,never()).saveAndFlush(any());
+    }
 }

@@ -14,10 +14,12 @@ import java.util.List;
 
 @Controller
 public class WorkloadPageController {
+    private final com.virtualenterprise.app.security.AccessScopeService scope;
     private final EmployeeRepository employees;
     private final DepartmentRepository departments;
     private final WorkloadContextService workload;
-    public WorkloadPageController(EmployeeRepository employees, DepartmentRepository departments, WorkloadContextService workload) {
+    public WorkloadPageController(EmployeeRepository employees, DepartmentRepository departments, WorkloadContextService workload, com.virtualenterprise.app.security.AccessScopeService scope) {
+        this.scope=scope;
         this.employees = employees; this.departments = departments; this.workload = workload;
     }
     @GetMapping("/workload")
@@ -29,9 +31,17 @@ public class WorkloadPageController {
         List<Employee> list = departmentId == null
                 ? employees.findByActiveTrueOrderByLastNameAscFirstNameAsc()
                 : employees.findByDepartmentIdAndActiveTrueOrderByLastNameAscFirstNameAsc(departmentId);
+        boolean aggregateOnly = scope.isReadOnlyObserver();
+        list=list.stream().filter(e -> aggregateOnly ? scope.canIncludeInWorkloadSummary(e.getId()) : scope.canViewWorkload(e.getId())).toList();
+        model.addAttribute("aggregateOnly", aggregateOnly);
         try {
             WorkloadEvaluationResponse response = workload.currentForEmployees(list, actualStart, actualEnd);
-            model.addAttribute("results", response.candidates());
+            var candidates = response.candidates();
+            model.addAttribute("summaryCount", candidates.size());
+            model.addAttribute("summaryCritical", candidates.stream().filter(c -> c.status().name().equals("CRITICAL")).count());
+            model.addAttribute("summaryWarning", candidates.stream().filter(c -> c.status().name().equals("WARNING")).count());
+            model.addAttribute("summaryNormal", candidates.stream().filter(c -> c.status().name().equals("NORMAL")).count());
+            model.addAttribute("results", aggregateOnly ? List.of() : candidates);
         } catch (Exception ex) {
             model.addAttribute("workloadError", "Сервис расчёта временно недоступен: " + ex.getMessage());
             model.addAttribute("results", List.of());

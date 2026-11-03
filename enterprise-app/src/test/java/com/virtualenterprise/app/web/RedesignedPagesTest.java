@@ -22,6 +22,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityConfig.class)
 @ActiveProfiles("dev")
 class RedesignedPagesTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean(name="accessScopeService") com.virtualenterprise.app.security.AccessScopeService accessScopeService;
+    @org.junit.jupiter.api.BeforeEach void allowPresentationScope() {
+        org.mockito.Mockito.lenient().when(accessScopeService.canCreateProject()).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canChangeTaskStatus(org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canViewEmployee(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canViewWorkload(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canViewProject(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canViewTask(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canViewPersonnel(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canContributeTask(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canManageTask(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(accessScopeService.canManageProject(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+    }
+
     @Autowired MockMvc mvc;
     @MockitoBean com.virtualenterprise.app.repository.AppUserRepository appUsers;
     @MockitoBean EmployeeViewService employees;

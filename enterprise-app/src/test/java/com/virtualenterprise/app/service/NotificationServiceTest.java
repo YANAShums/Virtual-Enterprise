@@ -25,11 +25,26 @@ class NotificationServiceTest {
     @Mock NotificationRepository notifications;
     @Mock EmployeeRepository employees;
     @Mock CurrentUserService currentUsers;
+    @Mock com.virtualenterprise.app.security.AccessScopeService scope;
     NotificationService service;
 
     @BeforeEach
     void setUp() {
-        service = new NotificationService(notifications, employees, currentUsers);
+        service = new NotificationService(notifications, employees, currentUsers, scope);
+    }
+
+    @Test
+    void revokedScopeHidesOldNotificationsAndUnreadCount() {
+        var user=mock(com.virtualenterprise.app.domain.AppUser.class);
+        when(user.getId()).thenReturn(10L);when(currentUsers.requireCurrentUser()).thenReturn(user);
+        var now=LocalDateTime.now();
+        var blocked=new NotificationRepository.NotificationItem(1L,"ATTRITION_RISK_CHANGED","Risk","Private","EMPLOYEE",1L,false,null,now);
+        var allowed=new NotificationRepository.NotificationItem(2L,"ATTRITION_RISK_CHANGED","Risk","Visible","EMPLOYEE",2L,false,null,now);
+        when(notifications.findForUser(10L,Integer.MAX_VALUE)).thenReturn(List.of(blocked,allowed));
+        when(scope.canViewAttrition(1L)).thenReturn(false);
+        when(scope.canViewAttrition(2L)).thenReturn(true);
+        org.junit.jupiter.api.Assertions.assertEquals(List.of(allowed),service.current(1));
+        org.junit.jupiter.api.Assertions.assertEquals(1,service.unreadCount());
     }
 
     @Test

@@ -10,23 +10,25 @@ import java.util.stream.Collectors;
 
 @Service
 public class OverviewViewService {
+    private final com.virtualenterprise.app.security.AccessScopeService scope;
     private final EmployeeRepository employees; private final ProjectRepository projects; private final TaskRepository tasks; private final WorkloadContextService workload;
     private final AttritionAnalyticsService attrition; private final NotificationService notifications;
     public OverviewViewService(EmployeeRepository employees, ProjectRepository projects, TaskRepository tasks,
                                WorkloadContextService workload, AttritionAnalyticsService attrition,
-                               NotificationService notifications) {
+                               NotificationService notifications, com.virtualenterprise.app.security.AccessScopeService scope) {
+        this.scope=scope;
         this.employees=employees; this.projects=projects; this.tasks=tasks; this.workload=workload;
         this.attrition=attrition; this.notifications=notifications;
     }
     public record DepartmentLoad(String name, BigDecimal percent) {}
     public Map<String,Object> overview() {
         Map<String,Object> view=new HashMap<>();
-        var team=employees.findByActiveTrueOrderByLastNameAscFirstNameAsc();
-        var activeProjects=projects.findByActiveTrueOrderByNameAsc();
+        var team=employees.findByActiveTrueOrderByLastNameAscFirstNameAsc().stream().filter(e -> scope.canViewEmployee(e.getId())).toList();
+        var activeProjects=projects.findByActiveTrueOrderByNameAsc().stream().filter(p -> scope.canViewProject(p.getId())).toList();
         view.put("employeeCount",team.size());view.put("projectCount",activeProjects.size());
-        view.put("activeTaskCount",tasks.countActive(List.of("PLANNED","IN_PROGRESS","REVIEW")));
-        view.put("overdueCount",tasks.countByOverdueTrue());view.put("projects",activeProjects.stream().limit(5).toList());
-        view.put("deadlines",tasks.findAllByOrderByStatusColumnOrderAscKanbanOrderAsc().stream().filter(t -> !Set.of("DONE","CANCELLED").contains(t.getStatus().getCode())).sorted(Comparator.comparing(t -> t.getPlannedEndDate())).limit(5).toList());
+        view.put("activeTaskCount",tasks.findAllByOrderByStatusColumnOrderAscKanbanOrderAsc().stream().filter(t -> scope.canViewTask(t.getId()) && List.of("PLANNED","IN_PROGRESS","REVIEW").contains(t.getStatus().getCode())).count());
+        view.put("overdueCount",tasks.findAllByOrderByStatusColumnOrderAscKanbanOrderAsc().stream().filter(t -> scope.canViewTask(t.getId()) && t.isOverdue()).count());view.put("projects",activeProjects.stream().limit(5).toList());
+        view.put("deadlines",tasks.findAllByOrderByStatusColumnOrderAscKanbanOrderAsc().stream().filter(t -> scope.canViewTask(t.getId())).filter(t -> !Set.of("DONE","CANCELLED").contains(t.getStatus().getCode())).sorted(Comparator.comparing(t -> t.getPlannedEndDate())).limit(5).toList());
         view.put("periodStart",LocalDate.now());view.put("periodEnd",LocalDate.now().plusDays(6));
         view.put("departmentLoads",List.of());view.put("overloaded",List.of());
         try {

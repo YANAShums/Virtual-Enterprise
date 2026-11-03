@@ -69,6 +69,7 @@ class AttritionFeatureAccessServiceTest {
         ReflectionTestUtils.setField(user, "id", id);
         Role role = mock(Role.class);
         when(role.getCode()).thenReturn(roleCode);
+        when(role.isActive()).thenReturn(true);
         user.setRoles(Set.of(role));
         return user;
     }

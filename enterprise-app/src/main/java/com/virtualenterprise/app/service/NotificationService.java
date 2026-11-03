@@ -20,9 +20,11 @@ public class NotificationService {
     private final NotificationRepository notifications;
     private final EmployeeRepository employees;
     private final CurrentUserService currentUsers;
+    private final com.virtualenterprise.app.security.AccessScopeService scope;
 
     public NotificationService(NotificationRepository notifications, EmployeeRepository employees,
-                               CurrentUserService currentUsers) {
+                               CurrentUserService currentUsers, com.virtualenterprise.app.security.AccessScopeService scope) {
+        this.scope=scope;
         this.notifications = notifications;
         this.employees = employees;
         this.currentUsers = currentUsers;
@@ -30,12 +32,23 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<NotificationItem> current(int limit) {
-        return notifications.findForUser(currentUsers.requireCurrentUser().getId(), Math.max(1, Math.min(limit, 100)));
+        return notifications.findForUser(currentUsers.requireCurrentUser().getId(), Integer.MAX_VALUE).stream()
+                .filter(this::visible).limit(Math.max(1, Math.min(limit, 100))).toList();
     }
 
     @Transactional(readOnly = true)
     public long unreadCount() {
-        return notifications.unreadCount(currentUsers.requireCurrentUser().getId());
+        return notifications.findForUser(currentUsers.requireCurrentUser().getId(), Integer.MAX_VALUE).stream()
+                .filter(n -> !n.read() && visible(n)).count();
+    }
+
+    private boolean visible(NotificationItem item) {
+        if(item.entityId()==null) return true;
+        if("ATTRITION_RISK_CHANGED".equals(item.type())) return scope.canViewAttrition(item.entityId());
+        if("TASK".equals(item.entityType())) return scope.canViewTask(item.entityId());
+        if("EMPLOYEE".equals(item.entityType())) return scope.canViewEmployee(item.entityId());
+        if("PROJECT".equals(item.entityType())) return scope.canViewProject(item.entityId());
+        return true;
     }
 
     @Transactional

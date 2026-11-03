@@ -62,13 +62,14 @@ public class AttritionAnalyticsService {
     public Overview overview(Filter requested) {
         Filter filter = normalize(requested);
         Long scopeDepartmentId = access.visibleDepartmentId();
+        Long scopeEnterpriseId = access.visibleEnterpriseId();
         if (scopeDepartmentId != null && filter.departmentId() != null
                 && !scopeDepartmentId.equals(filter.departmentId())) {
             throw new AppException(HttpStatus.FORBIDDEN, "ACCESS_DENIED",
                     "Нет доступа к прогнозам другого подразделения");
         }
         List<AttritionPredictionRepository.AnalyticsRow> source = predictions.findLatestAnalytics(
-                filter.from(), filter.to(), scopeDepartmentId, filter.departmentId(), filter.positionId(),
+                filter.from(), filter.to(), scopeEnterpriseId, scopeDepartmentId, filter.departmentId(), filter.positionId(),
                 filter.projectId(), filter.riskLevel(), filter.minProbability(), filter.maxProbability());
         Map<Long, CandidateWorkloadResult> loads = currentLoads(source);
         List<Row> rows = source.stream().map(item -> toRow(item, loads.get(item.employeeId()))).toList();
@@ -76,7 +77,7 @@ public class AttritionAnalyticsService {
         RISK_LEVELS.forEach(level -> distribution.put(level,
                 rows.stream().filter(row -> level.equals(row.riskLevel())).count()));
         List<AttritionPredictionRepository.TrendValue> trendSource = predictions.findTrend(
-                filter.from(), filter.to(), scopeDepartmentId, filter.departmentId(), filter.positionId(),
+                filter.from(), filter.to(), scopeEnterpriseId, scopeDepartmentId, filter.departmentId(), filter.positionId(),
                 filter.projectId(), filter.riskLevel(), filter.minProbability(), filter.maxProbability());
         List<TrendPoint> trend = chartPoints(trendSource);
         BigDecimal average = average(rows.stream().map(Row::probability).toList());
@@ -87,9 +88,9 @@ public class AttritionAnalyticsService {
                 distribution.get("HIGH"), distribution.get("CRITICAL"), average, change,
                 distribution, donutStyle(distribution, rows.size()), trend,
                 trend.stream().map(point -> point.x() + "," + point.y()).collect(Collectors.joining(" ")),
-                scopeDepartmentId == null ? departments.findByActiveTrueOrderByNameAsc()
+                scopeDepartmentId == null ? departments.findByActiveTrueOrderByNameAsc().stream().filter(d -> scopeEnterpriseId == null || scopeEnterpriseId.equals(d.getEnterprise().getId())).toList()
                         : departments.findById(scopeDepartmentId).stream().toList(),
-                positions.findByActiveTrueOrderByNameAsc(), projects.findByActiveTrueOrderByNameAsc());
+                positions.findByActiveTrueOrderByNameAsc(), projects.findByActiveTrueOrderByNameAsc().stream().filter(p -> scopeEnterpriseId == null || scopeEnterpriseId.equals(p.getEnterprise().getId())).toList());
     }
 
     @Transactional(readOnly = true)

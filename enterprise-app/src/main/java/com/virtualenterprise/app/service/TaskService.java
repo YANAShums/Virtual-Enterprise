@@ -42,12 +42,14 @@ public class TaskService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
     private final NotificationService notifications;
+    private final com.virtualenterprise.app.security.AccessScopeService scope;
 
     public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository,
                        ProjectMemberRepository memberRepository, EmployeeRepository employeeRepository,
                        TaskStatusRepository statusRepository, TaskPriorityRepository priorityRepository,
                        WorkloadContextService workloadService, CurrentUserService currentUserService,
-                       JdbcTemplate jdbc, ObjectMapper objectMapper, NotificationService notifications) {
+                       JdbcTemplate jdbc, ObjectMapper objectMapper, NotificationService notifications, com.virtualenterprise.app.security.AccessScopeService scope) {
+        this.scope=scope;
         this.taskRepository = taskRepository; this.projectRepository = projectRepository;
         this.memberRepository = memberRepository; this.employeeRepository = employeeRepository;
         this.statusRepository = statusRepository; this.priorityRepository = priorityRepository;
@@ -56,6 +58,7 @@ public class TaskService {
     }
 
     @Transactional
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canAssignEmployee(#request.projectId(), #request.assigneeEmployeeId())")
     public Task create(CreateTaskRequest request) {
         if (request.plannedStartDate() != null && request.plannedEndDate().isBefore(request.plannedStartDate())) {
             throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Дата завершения раньше даты начала");
@@ -66,7 +69,7 @@ public class TaskService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "ENTITY_NOT_FOUND", "Сотрудник не найден"));
         boolean member = memberRepository.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(project.getId()).stream()
                 .anyMatch(pm -> pm.getEmployee().getId().equals(assignee.getId()));
-        if (!member) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, "EMPLOYEE_NOT_IN_PROJECT", "Сотрудник не входит в команду проекта");
+        if (!member && !scope.canAssignEmployee(project.getId(),assignee.getId())) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, "EMPLOYEE_NOT_IN_PROJECT", "Сотрудник не входит в команду проекта");
 
         WorkloadEvaluationResponse evaluation = workloadService.preview(project.getId(),
                 request.plannedStartDate() == null ? java.time.LocalDate.now() : request.plannedStartDate(),
@@ -130,6 +133,7 @@ public class TaskService {
 
 
     @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canManageTask(#taskId)")
     public WorkloadEvaluationResponse recommendations(Long taskId) {
         Task task=taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
@@ -139,6 +143,7 @@ public class TaskService {
     }
 
     @Transactional
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canManageTask(#taskId)")
     public Task reassign(Long taskId, TaskReassignRequest request) {
         Task task=taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
@@ -148,7 +153,7 @@ public class TaskService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Сотрудник не найден"));
         boolean member=memberRepository.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(task.getProject().getId())
                 .stream().anyMatch(item -> item.getEmployee().getId().equals(target.getId()));
-        if(!member) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_NOT_IN_PROJECT","Сотрудник не входит в команду проекта");
+        if(!member && !scope.canAssignEmployee(task.getProject().getId(),target.getId())) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_NOT_IN_PROJECT","Сотрудник не входит в команду проекта");
         WorkloadEvaluationResponse evaluation=workloadService.preview(task.getProject().getId(),
                 task.getPlannedStartDate()==null ? java.time.LocalDate.now() : task.getPlannedStartDate(),
                 task.getPlannedEndDate(),task.getPlannedHours(),List.of(),requiredSkillIds(taskId),taskId);
@@ -196,6 +201,7 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canManageTask(#taskId)")
     public TaskEditForm form(Long taskId) {
         Task task=taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
@@ -208,6 +214,7 @@ public class TaskService {
     }
 
     @Transactional
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canManageTask(#taskId)")
     public Task update(Long taskId,TaskEditForm form) {
         Task task=taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Задача не найдена"));
@@ -219,7 +226,7 @@ public class TaskService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,"ENTITY_NOT_FOUND","Сотрудник не найден"));
         boolean member=memberRepository.findByProjectIdAndActiveTrueOrderByEmployeeLastNameAsc(task.getProject().getId()).stream()
                 .anyMatch(item -> Objects.equals(item.getEmployee().getId(),assignee.getId()));
-        if(!member) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_NOT_IN_PROJECT","Сотрудник не входит в команду проекта");
+        if(!member && !scope.canAssignEmployee(task.getProject().getId(),assignee.getId())) throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY,"EMPLOYEE_NOT_IN_PROJECT","Сотрудник не входит в команду проекта");
         TaskPriority priority=priorityRepository.findByCode(form.getPriorityCode())
                 .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST,"VALIDATION_ERROR","Неизвестный приоритет"));
         Map<String,Object> before=taskSnapshot(task);
@@ -246,6 +253,7 @@ public class TaskService {
         values.put("plannedHours",task.getPlannedHours());return values;
     }
     @Transactional
+    @org.springframework.security.access.prepost.PreAuthorize("@accessScopeService.canChangeTaskStatus(#taskId, #request.targetStatusCode())")
     public Task changeStatus(Long taskId, TaskStatusChangeRequest request) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "ENTITY_NOT_FOUND", "Задача не найдена"));
@@ -253,7 +261,7 @@ public class TaskService {
             throw new AppException(HttpStatus.CONFLICT, "OPTIMISTIC_LOCK", "Задача уже изменена другим пользователем");
         }
         AppUser actingUser = currentUserService.requireCurrentUser();
-        boolean onlyEmployee = actingUser.getRoles().stream().allMatch(role -> "EMPLOYEE".equals(role.getCode()));
+        boolean onlyEmployee = actingUser.getRoles().stream().anyMatch(role -> role.isActive() && "EMPLOYEE".equals(role.getCode())) && actingUser.getRoles().stream().noneMatch(role -> role.isActive() && Set.of("ADMIN","ENTERPRISE_MANAGER","DEPARTMENT_MANAGER","PROJECT_MANAGER").contains(role.getCode()));
         if (onlyEmployee) {
             Employee ownEmployee = employeeRepository.findByUserId(actingUser.getId()).orElse(null);
             if (ownEmployee == null || task.getAssignee() == null || !task.getAssignee().getId().equals(ownEmployee.getId())) {
@@ -277,6 +285,16 @@ public class TaskService {
         TaskStatus newStatus = statusRepository.findByCode(target)
                 .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Статус не найден"));
         TaskStatus oldStatus = task.getStatus();
+        BigDecimal previousHours=task.getActualHours();
+        if ("IN_PROGRESS".equals(current) && "REVIEW".equals(target)) {
+            BigDecimal hours=request.actualHours();
+            if(hours==null || hours.signum()<=0) throw new AppException(HttpStatus.BAD_REQUEST,"ACTUAL_HOURS_REQUIRED","Укажите фактические трудозатраты");
+            if(hours.scale()>2 || hours.compareTo(new BigDecimal("99999999.99"))>0)
+                throw new AppException(HttpStatus.BAD_REQUEST,"ACTUAL_HOURS_INVALID","Допустимо до 99999999.99 часа и не более двух знаков после запятой");
+            task.setActualHours(hours);
+        } else if(request.actualHours()!=null) {
+            throw new AppException(HttpStatus.BAD_REQUEST,"ACTUAL_HOURS_NOT_ALLOWED","Трудозатраты указываются при передаче на проверку");
+        }
         task.setStatus(newStatus);
         if (request.kanbanOrder() != null) task.setKanbanOrder(request.kanbanOrder());
         if ("IN_PROGRESS".equals(target) && task.getActualStartAt() == null) task.setActualStartAt(LocalDateTime.now());
@@ -290,7 +308,7 @@ public class TaskService {
                     task.getId(), oldStatus.getId(), newStatus.getId(), user.getId(), request.comment());
             writeEvent("TASK", saved.getId(), "TASK_UPDATED", Map.of("taskId", saved.getId(), "status", target));
             writeAudit(user.getId(), "TASK_STATUS_CHANGED", "TASK", saved.getId(),
-                    Map.of("status", current), Map.of("status", target));
+                    Map.of("status", current, "actualHours", previousHours==null?BigDecimal.ZERO:previousHours), Map.of("status", target, "actualHours", saved.getActualHours()==null?BigDecimal.ZERO:saved.getActualHours()));
             return saved;
         } catch (OptimisticLockingFailureException ex) {
             throw new AppException(HttpStatus.CONFLICT, "OPTIMISTIC_LOCK", "Задача уже изменена другим пользователем");

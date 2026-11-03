@@ -64,7 +64,7 @@ public class AttritionPredictionRepository {
         return ids.isEmpty() ? Optional.empty() : findById(ids.getFirst());
     }
 
-    public List<AnalyticsRow> findLatestAnalytics(LocalDate from, LocalDate to, Long scopeDepartmentId,
+    public List<AnalyticsRow> findLatestAnalytics(LocalDate from, LocalDate to, Long scopeEnterpriseId, Long scopeDepartmentId,
                                                    Long departmentId, Long positionId, Long projectId,
                                                    String riskLevel, BigDecimal minProbability,
                                                    BigDecimal maxProbability) {
@@ -86,6 +86,7 @@ public class AttritionPredictionRepository {
                 WHERE p.rn=1 AND e.active=1
                 """);
         List<Object> params = new ArrayList<>(List.of(from, to));
+        appendFilter(sql, params, "e.enterprise_id", scopeEnterpriseId);
         appendFilter(sql, params, "d.id", scopeDepartmentId);
         appendFilter(sql, params, "d.id", departmentId);
         appendFilter(sql, params, "pos.id", positionId);
@@ -108,7 +109,7 @@ public class AttritionPredictionRepository {
                 params.toArray());
     }
 
-    public List<TrendValue> findTrend(LocalDate from, LocalDate to, Long scopeDepartmentId,
+    public List<TrendValue> findTrend(LocalDate from, LocalDate to, Long scopeEnterpriseId, Long scopeDepartmentId,
                                       Long departmentId, Long positionId, Long projectId,
                                       String riskLevel, BigDecimal minProbability, BigDecimal maxProbability) {
         StringBuilder sql = new StringBuilder("""
@@ -122,6 +123,7 @@ public class AttritionPredictionRepository {
                 WHERE p.rn=1 AND e.active=1
                 """);
         List<Object> params = new ArrayList<>(List.of(from, to));
+        appendFilter(sql, params, "e.enterprise_id", scopeEnterpriseId);
         appendFilter(sql, params, "d.id", scopeDepartmentId);
         appendFilter(sql, params, "d.id", departmentId);
         appendFilter(sql, params, "pos.id", positionId);
