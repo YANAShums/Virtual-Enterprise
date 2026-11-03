@@ -61,7 +61,8 @@ public class KanbanPageController {
         model.addAttribute("loadByEmployee", loadByEmployee);
         model.addAttribute("priorities", priorities.findByActiveTrueOrderByWeightAsc());
         model.addAttribute("departments", departments.findByActiveTrueOrderByNameAsc());
-        model.addAttribute("skills", skills.findByActiveTrueOrderByNameAsc());
+        model.addAttribute("skills", skills.findByActiveTrueOrderByNameAsc().stream()
+                .filter(skill -> allProjects.stream().anyMatch(p -> p.getEnterprise().getId().equals(skill.getEnterprise().getId()))).toList());
         return "kanban/board";
     }
 }

@@ -9,6 +9,7 @@ interface Candidate {
   employeeId: number;
   fullName: string;
   score: number;
+  skillMatchPercent: number | null;
   currentLoadPercent: number;
   projectedLoadPercent: number;
   status: string;
@@ -50,15 +51,20 @@ export function TaskCreate({
   const [error, setError] = useState("");
   const projects = options(page, "#taskProject option");
   const priorities = options(page, "#taskPriority option");
-  const skills = [
+  const allSkills = [
     ...page.document.querySelectorAll<HTMLInputElement>(".task-skill"),
   ].map((input) => ({
     id: input.value,
-    name: input.parentElement?.textContent || "",
+    name: input.parentElement?.textContent?.trim() || "",
+    enterpriseId: input.dataset.enterpriseId,
   }));
   const selectedProject =
     page.document.querySelector<HTMLSelectElement>("#taskProject")?.value ||
     projects[0]?.value;
+  const [projectId, setProjectId] = useState(selectedProject || "");
+  const projectOption = page.document.querySelector<HTMLOptionElement>(`#taskProject option[value="${projectId}"]`);
+  const skills = allSkills.filter(skill => !skill.enterpriseId || skill.enterpriseId === projectOption?.dataset.enterpriseId);
+  const canManageTeam = projectOption?.dataset.canManage === "true";
   const invalidate = () => {
     generation.current++;
     setPreview(null);
@@ -184,8 +190,8 @@ export function TaskCreate({
       <select
         id="createProject"
         name="projectId"
-        defaultValue={selectedProject}
-        onChange={invalidate}
+        value={projectId}
+        onChange={event => { setProjectId(event.target.value); invalidate(); }}
         required
       >
         {projects.map((option) => (
@@ -241,12 +247,10 @@ export function TaskCreate({
           </select>
         </div>
       </div>
-      {!!skills.length && (
-        <details className="skills-details">
-          <summary>
-            Требуемые навыки <span className="optional">необязательно</span>
-          </summary>
-          <div className="skill-choice-list">
+      <fieldset className="task-skill-requirements" key={projectId}>
+          <legend>Требуемые навыки <span className="optional">необязательно</span></legend>
+          <p className="form-text">Выберите навыки для этой задачи. Они влияют на рейтинг исполнителей, но не запрещают назначение.</p>
+          {skills.length > 0 ? <div className="skill-choice-list">
             {skills.map((skill) => (
               <label className="skill-choice" key={skill.id}>
                 <input
@@ -258,9 +262,11 @@ export function TaskCreate({
                 {skill.name}
               </label>
             ))}
-          </div>
-        </details>
-      )}
+          </div> : <p className="empty-inline">В предприятии проекта пока нет навыков. Администратор может добавить их в карточке сотрудника: «Навыки → Добавить». Пока подбор учитывает загрузку и доступность.</p>}
+      </fieldset>
+      <p className="form-text">Исполнители подбираются из команды проекта. Руководителю подразделения также доступны его сотрудники.
+        {canManageTeam && <> <a className="text-link" href={`/projects/${projectId}/edit`} target="_blank" rel="noopener noreferrer" aria-label="Изменить команду проекта (в новой вкладке)">Изменить команду проекта</a><span> После сохранения команды нажмите «Пересчитать».</span></>}
+      </p>
       <div className="assignee-heading">
         <h3>Исполнитель</h3>
         <button
@@ -284,7 +290,7 @@ export function TaskCreate({
         )}
         {preview?.candidates.length === 0 && (
           <p className="muted">
-            Доступных кандидатов нет. Измените период или трудоёмкость.
+            Кандидатов нет. Проверьте состав команды проекта, затем период и трудоёмкость.
           </p>
         )}
         {preview?.candidates.map((candidate) => (
@@ -310,6 +316,7 @@ export function TaskCreate({
                 {candidate.projectedLoadPercent}% ·{" "}
                 {loadLabels[candidate.status] || candidate.status}
               </small>
+              {candidate.skillMatchPercent != null && <small>Совпадение навыков: {candidate.skillMatchPercent}%</small>}
               <details>
                 <summary>Почему этот сотрудник</summary>
                 <ul>
