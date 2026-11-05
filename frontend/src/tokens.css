@@ -18,8 +18,8 @@
   --color-lime-hover: #bce72e;
   --color-lime-pressed: #a9d51e;
   --color-lime-soft: #eff8ca;
-  --color-lilac: #8d7bea;
-  --color-lilac-hover: #7967d8;
+  --color-lilac: #7657e8;
+  --color-lilac-hover: #6545d6;
   --color-lilac-soft: #ece8ff;
   --color-lilac-surface: #f5f2ff;
   --color-ai-text: #5743ac;
@@ -31,7 +31,7 @@
   --color-danger: #da4d54;
   --color-danger-text: #b82e3a;
   --color-danger-soft: #fce8e9;
-  --color-dust-blue: #6d82b8;
+  --color-dust-blue: #5279cc;
   --color-dust-blue-text: #4a609a;
   --color-dust-blue-soft: #ebeef7;
   --color-info: var(--color-dust-blue);
@@ -47,10 +47,10 @@
   --color-feedback-danger-border: #dfb4b9;
   --color-feedback-info-bg: #f1f3f8;
   --color-feedback-info-border: #b7c2d9;
-  --color-risk-low-chart: #53846e;
-  --color-risk-medium-chart: #d6a547;
-  --color-risk-high-chart: #dc7078;
-  --color-risk-critical-chart: #923e53;
+  --color-risk-low-chart: #1f9d68;
+  --color-risk-medium-chart: #e2a116;
+  --color-risk-high-chart: #ee5965;
+  --color-risk-critical-chart: #b4233c;
   --color-warning-text: #8a650e;
   --color-on-dark: #f6f6f8;
   --color-sidebar-secondary: #a9a9b3;

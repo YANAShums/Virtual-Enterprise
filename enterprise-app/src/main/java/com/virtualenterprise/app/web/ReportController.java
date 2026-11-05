@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -51,18 +52,18 @@ public class ReportController {
                                   @RequestParam(required = false) String riskLevel,
                                   @RequestParam(required = false) BigDecimal minProbability,
                                   @RequestParam(required = false) BigDecimal maxProbability) {
+        boolean xlsx = "xlsx".equalsIgnoreCase(format);
+        if (!xlsx && !"pdf".equalsIgnoreCase(format)) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Поддерживаются форматы XLSX и PDF");
+        }
         var report = reports.report(filter(from, to, departmentId, positionId, projectId,
                 riskLevel, minProbability, maxProbability));
-        boolean xlsx = "xlsx".equalsIgnoreCase(format);
-        if (!xlsx && !"csv".equalsIgnoreCase(format)) {
-            throw new com.virtualenterprise.app.service.AppException(org.springframework.http.HttpStatus.BAD_REQUEST,
-                    "UNSUPPORTED_REPORT_FORMAT", "Поддерживаются форматы CSV и XLSX");
-        }
-        byte[] body = xlsx ? reports.xlsx(report) : reports.csv(report);
-        String extension = xlsx ? "xlsx" : "csv";
+        byte[] body = xlsx ? reports.xlsx(report) : reports.pdf(report);
+        String extension = xlsx ? "xlsx" : "pdf";
         MediaType type = xlsx
                 ? MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                : MediaType.parseMediaType("text/csv;charset=UTF-8");
+                : MediaType.APPLICATION_PDF;
         return ResponseEntity.ok().contentType(type)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=flowstaff-management-" + LocalDate.now() + "." + extension)

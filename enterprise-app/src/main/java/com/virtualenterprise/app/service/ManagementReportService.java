@@ -5,7 +5,6 @@ import com.virtualenterprise.app.service.AttritionAnalyticsService.Overview;
 import com.virtualenterprise.app.service.AttritionAnalyticsService.Row;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -19,20 +18,7 @@ public class ManagementReportService {
 
     public Overview report(Filter filter) { return analytics.overview(filter); }
 
-    public byte[] csv(Overview report) {
-        StringBuilder csv = new StringBuilder("\uFEFF");
-        csv.append("Сотрудник;Подразделение;Должность;Загрузка, %;Активные задачи;Просроченные задачи;Вероятность ухода, %;Уровень риска;Дата расчёта;Версия модели\r\n");
-        for (Row row : report.rows()) {
-            csv.append(csv(row.employeeName())).append(';').append(csv(row.departmentName())).append(';')
-                    .append(csv(row.positionName())).append(';')
-                    .append(row.workloadPercent() == null ? "" : row.workloadPercent()).append(';')
-                    .append(row.activeTasks()).append(';').append(row.overdueTasks()).append(';')
-                    .append(row.probabilityPercent()).append(';').append(row.riskLevel()).append(';')
-                    .append(row.calculatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).append(';')
-                    .append(csv(row.modelVersion())).append("\r\n");
-        }
-        return csv.toString().getBytes(StandardCharsets.UTF_8);
-    }
+    public byte[] pdf(Overview report) { return PdfReportWriter.write(report); }
 
     public byte[] xlsx(Overview report) {
         List<List<XlsxReportWriter.Cell>> rows = new ArrayList<>();
@@ -57,8 +43,4 @@ public class ManagementReportService {
         return XlsxReportWriter.write("Аналитика", rows);
     }
 
-    private String csv(String value) {
-        if (value == null) return "";
-        return '"' + value.replace("\"", "\"\"") + '"';
-    }
 }

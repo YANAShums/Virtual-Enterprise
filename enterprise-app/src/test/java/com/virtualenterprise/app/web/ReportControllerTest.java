@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -47,13 +48,23 @@ class ReportControllerTest {
     }
 
     @Test @WithMockUser(roles = "ADMIN")
-    void csvExport_preservesFilterAndReturnsAttachment() throws Exception {
+    void pdfExport_preservesFilterAndReturnsAttachment() throws Exception {
         when(reports.report(any())).thenReturn(emptyOverview());
-        when(reports.csv(any())).thenReturn("header".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        mvc.perform(get("/reports/export").param("format", "csv").param("riskLevel", "HIGH"))
+        when(reports.pdf(any())).thenReturn(new byte[]{'%', 'P', 'D', 'F', '-'});
+        mvc.perform(get("/reports/export").param("format", "pdf").param("riskLevel", "HIGH"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString(".csv")))
-                .andExpect(content().contentTypeCompatibleWith("text/csv"));
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString(".pdf")))
+                .andExpect(content().contentType("application/pdf"));
+        var filter = org.mockito.ArgumentCaptor.forClass(AttritionAnalyticsService.Filter.class);
+        verify(reports).report(filter.capture());
+        org.assertj.core.api.Assertions.assertThat(filter.getValue().riskLevel()).isEqualTo("HIGH");
+    }
+
+    @Test @WithMockUser(roles = "ADMIN")
+    void csvExport_isRejected() throws Exception {
+        when(reports.report(any())).thenReturn(emptyOverview());
+        mvc.perform(get("/reports/export").param("format", "csv"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test @WithMockUser(roles = "DEPARTMENT_MANAGER")

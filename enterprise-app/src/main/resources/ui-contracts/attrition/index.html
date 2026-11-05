@@ -2,17 +2,17 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head('Прогнозы текучести')}"></head>
 <body><div th:replace="~{fragments/layout :: navbar}"></div>
-<main id="mainContent" class="container-fluid attrition-page">
+<main id="mainContent" class="container-fluid"><div class="attrition-page">
     <div class="page-heading attrition-heading">
-        <div><p class="eyebrow">КАДРОВАЯ АНАЛИТИКА</p><h1>Прогнозы текучести</h1>
+        <div><h1>Прогнозы текучести</h1>
             <p class="page-subtitle">Вероятность ухода на горизонте 90 дней по сохранённым прогнозам.</p></div>
         <form sec:authorize="hasAnyRole('ADMIN','ENTERPRISE_MANAGER')" th:action="@{/attrition/recalculate}" method="post">
             <button class="btn btn-primary"><i data-lucide="refresh-cw" aria-hidden="true"></i>Пересчитать прогнозы</button>
         </form>
     </div>
-    <div th:if="${recalculation != null}" class="alert" th:classappend="${recalculation.failed == 0 ? 'alert-success' : 'alert-warning'}" role="status">
-        Пересчёт завершён: <strong th:text="${recalculation.succeeded}"></strong> успешно,
-        <strong th:text="${recalculation.failed}"></strong> с ошибкой.
+    <div th:if="${recalculation != null}" class="alert ui-alert recalculation-status" th:classappend="${recalculation.failed == 0 ? 'alert-success' : 'alert-warning'}" role="status">
+        <i th:attr="data-lucide=${recalculation.failed == 0 ? 'circle-check' : 'triangle-alert'}" aria-hidden="true"></i>
+        <div class="feedback-copy"><strong>Пересчёт завершён</strong><p><span th:text="${recalculation.succeeded}"></span> успешно, <span th:text="${recalculation.failed}"></span> с ошибкой.</p></div>
     </div>
 
     <details class="filter-disclosure" data-responsive-filters open
@@ -23,7 +23,7 @@
              + (param.riskLevel != null and param.riskLevel[0] != '' ? 1 : 0)
              + (param.minProbability != null and param.minProbability[0] != '' ? 1 : 0)
              + (param.maxProbability != null and param.maxProbability[0] != '' ? 1 : 0)}">
-    <summary><i data-lucide="sliders-horizontal" aria-hidden="true"></i><span>Фильтры</span><span class="badge-soft" th:text="${'Активно: '+activeCount}"></span><i data-lucide="chevron-down" class="filter-chevron" aria-hidden="true"></i></summary>
+    <summary><span class="filter-summary-title"><i data-lucide="sliders-horizontal" aria-hidden="true"></i><span>Фильтры</span></span><span class="filter-summary-period" th:text="${#temporals.format(overview.filter.from,'dd.MM.yyyy')+' — '+#temporals.format(overview.filter.to,'dd.MM.yyyy')}"></span><span class="badge-soft" th:text="${activeCount == 0 ? 'Без дополнительных условий' : 'Активно: '+activeCount}"></span><i data-lucide="chevron-down" class="filter-chevron" aria-hidden="true"></i></summary>
     <form class="attrition-filters" method="get" th:action="@{/attrition}">
         <label><span>Период с</span><input class="form-control" type="date" name="from" th:value="${overview.filter.from}"></label>
         <label><span>По</span><input class="form-control" type="date" name="to" th:value="${overview.filter.to}"></label>
@@ -38,10 +38,24 @@
     </details>
 
     <section class="attrition-kpis" aria-label="Ключевые показатели риска">
-        <article class="risk-kpi risk-high"><span class="kpi-symbol"><i data-lucide="triangle-alert" aria-hidden="true"></i></span><div><span>Высокий риск</span><strong th:text="${overview.highCount}"></strong><small>сотрудников с уровнем HIGH</small></div></article>
-        <article class="risk-kpi risk-critical"><span class="kpi-symbol"><i data-lucide="shield-alert" aria-hidden="true"></i></span><div><span>Критический риск</span><strong th:text="${overview.criticalCount}"></strong><small>сотрудников с уровнем CRITICAL</small></div></article>
-        <article class="risk-kpi"><span class="kpi-symbol"><i data-lucide="gauge" aria-hidden="true"></i></span><div><span>Средняя вероятность</span><strong th:text="${overview.averageProbability != null ? #numbers.formatDecimal(overview.averageProbability*100,1,1)+'%' : '—'}"></strong><small>по текущей выборке</small></div></article>
-        <article class="risk-kpi"><span class="kpi-symbol"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i></span><div><span>К предыдущему срезу</span><strong th:text="${overview.changePoints != null ? (overview.changePoints > 0 ? '+' : '')+#numbers.formatDecimal(overview.changePoints,1,1)+' п.п.' : '—'}"></strong><small>изменение средней вероятности</small></div></article>
+        <article class="risk-kpi risk-attention" th:classappend="${overview.highCount + overview.criticalCount > 0 ? 'has-risk' : 'is-clear'}">
+            <header class="risk-kpi-header"><span class="kpi-symbol"><i th:attr="data-lucide=${overview.highCount + overview.criticalCount > 0 ? 'shield-alert' : 'shield-check'}" aria-hidden="true"></i></span><h2>Требуют внимания</h2></header>
+            <div class="risk-kpi-copy"><strong th:text="${overview.highCount + overview.criticalCount}"></strong><p class="risk-kpi-description" th:text="${overview.highCount + overview.criticalCount > 0 ? 'Сотрудники с повышенным риском' : 'Повышенных рисков не выявлено'}"></p>
+                <dl class="attention-breakdown"><div><dt>Высокий риск</dt><dd th:text="${overview.highCount}"></dd></div><div><dt>Критический риск</dt><dd th:text="${overview.criticalCount}"></dd></div></dl>
+            </div>
+        </article>
+        <article class="risk-kpi risk-average">
+            <header class="risk-kpi-header"><span class="kpi-symbol"><i data-lucide="gauge" aria-hidden="true"></i></span><h2>Средняя вероятность</h2></header>
+            <div class="risk-kpi-copy"><strong th:text="${overview.averageProbability != null ? #numbers.formatDecimal(overview.averageProbability*100,1,1)+'%' : '—'}"></strong><p class="risk-kpi-description">По сотрудникам в текущей выборке</p>
+                <p class="comparison-note" th:classappend="${overview.changePoints != null ? 'has-comparison' : ''}"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i><span th:if="${overview.changePoints != null}" class="comparison-value" th:text="${(overview.changePoints > 0 ? '+' : '')+#numbers.formatDecimal(overview.changePoints,1,1)+' п.п.'}"></span><span th:text="${overview.changePoints != null ? 'к предыдущему срезу' : 'Нет предыдущего среза для сравнения'}"></span></p>
+            </div>
+        </article>
+        <article class="risk-kpi risk-sample">
+            <header class="risk-kpi-header"><span class="kpi-symbol"><i data-lucide="users-round" aria-hidden="true"></i></span><h2>Текущая выборка</h2></header>
+            <div class="risk-kpi-copy"><strong th:text="${#lists.size(overview.rows)}"></strong><p class="risk-kpi-description">Сотрудники с сохранённым прогнозом</p>
+                <p class="sample-period"><span>Период прогноза</span><time th:text="${#temporals.format(overview.filter.from,'dd.MM')+' — '+#temporals.format(overview.filter.to,'dd.MM.yyyy')}"></time></p>
+            </div>
+        </article>
     </section>
 
     <section class="attrition-charts">
@@ -49,9 +63,9 @@
             <div class="donut-layout"><div class="risk-donut" th:style="${overview.donutStyle}" role="img" th:aria-label="${'Всего прогнозов: '+#lists.size(overview.rows)}"><span><strong th:text="${#lists.size(overview.rows)}"></strong><small>прогнозов</small></span></div>
                 <dl class="risk-legend"><div th:each="level:${T(java.util.List).of('LOW','MEDIUM','HIGH','CRITICAL')}"><dt><span th:class="${'risk-dot risk-'+#strings.toLowerCase(level)}"></span><span th:text="${level}"></span></dt><dd th:text="${overview.distribution[level]}"></dd></div></dl></div>
         </article>
-        <article class="widget risk-trend"><div class="widget-heading"><div><span class="widget-icon"><i data-lucide="chart-spline" aria-hidden="true"></i></span><div><h2>Динамика средней вероятности</h2><p class="section-note" th:text="${#temporals.format(overview.filter.from,'dd.MM.yyyy')+' — '+#temporals.format(overview.filter.to,'dd.MM.yyyy')}"></p></div></div></div>
+        <article class="widget risk-trend"><div class="widget-heading"><div><span class="widget-icon"><i data-lucide="chart-spline" aria-hidden="true"></i></span><div><h2>Динамика средней вероятности</h2><p class="section-note" th:text="${#temporals.format(overview.filter.from,'dd.MM.yyyy')+' — '+#temporals.format(overview.filter.to,'dd.MM.yyyy')}"></p></div></div><span class="trend-readout" th:text="${overview.averageProbability != null ? 'Среднее '+#numbers.formatDecimal(overview.averageProbability*100,1,1)+'%' : 'Нет данных'}"></span></div>
             <div th:if="${!#lists.isEmpty(overview.trend)}" class="line-chart">
-                <svg viewBox="0 0 600 190" role="img" aria-label="График средней вероятности ухода"><line x1="24" y1="166" x2="576" y2="166"></line><line x1="24" y1="95" x2="576" y2="95"></line><line x1="24" y1="24" x2="576" y2="24"></line><polyline th:attr="points=${overview.trendPolyline}"></polyline><g th:each="point:${overview.trend}"><circle th:attr="cx=${point.x},cy=${point.y}" r="5"><title th:text="${#temporals.format(point.date,'dd.MM.yyyy')+': '+point.probabilityPercent+'%'}"></title></circle></g></svg>
+                <svg viewBox="0 0 600 190" role="img" aria-label="График средней вероятности ухода"><text x="0" y="20">100%</text><text x="0" y="91">50%</text><text x="0" y="162">0%</text><line x1="24" y1="166" x2="576" y2="166"></line><line x1="24" y1="95" x2="576" y2="95"></line><line x1="24" y1="24" x2="576" y2="24"></line><polyline th:attr="points=${overview.trendPolyline}"></polyline><g th:each="point:${overview.trend}"><circle th:attr="cx=${point.x},cy=${point.y}" r="5"><title th:text="${#temporals.format(point.date,'dd.MM.yyyy')+': '+point.probabilityPercent+'%'}"></title></circle></g></svg>
                 <div class="chart-range"><span th:text="${#temporals.format(overview.trend[0].date,'dd.MM')}"></span><span th:text="${#temporals.format(overview.trend[#lists.size(overview.trend)-1].date,'dd.MM')}"></span></div>
             </div><div th:if="${#lists.isEmpty(overview.trend)}" class="empty-state compact"><i data-lucide="chart-spline" aria-hidden="true"></i><p>Для выбранного периода ещё нет истории прогнозов.</p></div>
         </article>
@@ -64,4 +78,4 @@
         <div th:if="${#lists.isEmpty(overview.rows)}" class="empty-state"><span class="empty-icon"><i data-lucide="shield-question" aria-hidden="true"></i></span><h3>Прогнозов пока нет</h3><p>Измените фильтры или выполните пересчёт после обучения модели.</p></div>
     </section>
     <p class="decision-note"><i data-lucide="info" aria-hidden="true"></i>Прогноз носит рекомендательный характер и не является основанием для автоматического кадрового решения.</p>
-</main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>
+</div></main><div th:replace="~{fragments/layout :: scripts}"></div></body></html>
